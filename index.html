@@ -1,143 +1,99 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CyberShield</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberShield AI</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
 
-<style>
-body{
-    font-family: system-ui;
-    background:#0f172a;
-    color:white;
-    margin:0;
-    padding:20px;
-}
-.container{
-    max-width:600px;
-    margin:auto;
-}
-input,button{
-    width:100%;
-    padding:14px;
-    margin-top:10px;
-    border-radius:10px;
-    border:none;
-    font-size:16px;
-}
-button{
-    background:#00d2ff;
-    color:black;
-    font-weight:bold;
-    cursor:pointer;
-}
-#resultBox{
-    margin-top:20px;
-    padding:15px;
-    background:#020617;
-    border-radius:10px;
-    display:none;
-    white-space:pre-wrap;
-}
-</style>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg,#0f172a,#1e293b);
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: #111827;
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    }
+
+    h1 { margin-bottom: 10px; }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+    }
+
+    input { background: #1f2937; color: white; }
+
+    button {
+      background: #22c55e;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover { background: #16a34a; }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+
+    .safe { background: #065f46; }
+    .danger { background: #7f1d1d; }
+    .warn { background: #92400e; }
+
+    video {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 10px;
+    }
+
+    .loader {
+      margin-top: 15px;
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
-
 <div class="container">
 
-<h2>🛡️ CyberShield</h2>
+  <h1>🛡 CyberShield AI</h1>
+  <p>فحص روابط وملفات مشبوهة باستخدام الذكاء الاصطناعي</p>
 
-<input type="text" id="mainInput" placeholder="الصق الرابط أو النص هنا">
+  <input type="password" id="apiKey" placeholder="أدخل مفتاح Gemini API الخاص بك">
 
-<input type="file" id="fileInput" accept="image/*,video/*">
+  <input type="text" id="userInput" placeholder="الصق رابط أو نص للفحص">
 
-<button onclick="startScan()">فحص الآن</button>
+  <input type="file" id="imageInput" accept="image/*">
 
-<div id="resultBox"></div>
+  <button onclick="startCamera()">📷 مسح QR بالكاميرا</button>
+  <video id="video" autoplay></video>
+
+  <button onclick="analyze()">🔍 فحص الآن</button>
+
+  <div class="loader" id="loader">جاري التحليل...</div>
+
+  <div id="result"></div>
 
 </div>
 
-<script>
-let uploadedFileBase64 = null;
-let uploadedMimeType = null;
-
-document.getElementById("fileInput").addEventListener("change", function(e){
-    const file = e.target.files[0];
-    if(!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(ev){
-        uploadedMimeType = file.type;
-        uploadedFileBase64 = ev.target.result.split(",")[1];
-    };
-    reader.readAsDataURL(file);
-});
-
-function analyzeURLLocally(url){
-    try{
-        const u = new URL(url);
-        const warnings=[];
-
-        if(url.length>120) warnings.push("رابط طويل بشكل مريب");
-        if(u.hostname.includes("login")) warnings.push("صفحة تسجيل دخول مشبوهة");
-        if(u.hostname.split(".").length>3) warnings.push("نطاق فرعي مريب");
-
-        return warnings;
-    }catch{
-        return [];
-    }
-}
-
-async function startScan(){
-
-    const inputVal = document.getElementById("mainInput").value;
-    const resultBox = document.getElementById("resultBox");
-
-    if(!inputVal && !uploadedFileBase64){
-        alert("الرجاء إدخال نص أو ملف");
-        return;
-    }
-
-    resultBox.style.display="block";
-    resultBox.innerText="جاري التحليل...";
-
-    try{
-        const response = await fetch("http://localhost:3000/analyze",{
-            method:"POST",
-            headers:{ "Content-Type":"application/json" },
-            body: JSON.stringify({
-                text: uploadedFileBase64 ? null : inputVal,
-                fileBase64: uploadedFileBase64,
-                mimeType: uploadedMimeType,
-                lang: "ar"
-            })
-        });
-
-        const data = await response.json();
-        let resultText = data.result;
-
-        if(!uploadedFileBase64){
-            const local = analyzeURLLocally(inputVal);
-            if(local.length){
-                resultText += "\n\nتحليل محلي:\n" + local.join("\n");
-            }
-        }
-
-        resultBox.innerText = resultText;
-
-    }catch(err){
-        resultBox.innerText="خطأ في الاتصال بالخادم";
-    }
-}
-
-if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("sw.js");
-}
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>
