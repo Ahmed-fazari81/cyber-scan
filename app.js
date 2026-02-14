@@ -1,4 +1,4 @@
-const API_URL = "https://cybershield-api.onrender.com/analyze";
+const API_URL = "https://cyber-scan.onrender.com/analyze";
 
 const resultDiv = document.getElementById("result");
 const loader = document.getElementById("loader");
@@ -9,8 +9,13 @@ function showResult(text, type) {
 }
 
 async function analyze() {
-  const input = document.getElementById("userInput").value;
-  const apiKey = document.getElementById("apiKey").value;
+  const input = document.getElementById("userInput").value.trim();
+  const apiKey = document.getElementById("apiKey").value.trim();
+
+  if (!input) {
+    alert("يرجى إدخال رابط أو نص للفحص");
+    return;
+  }
 
   if (!apiKey) {
     alert("يرجى إدخال API Key");
@@ -31,17 +36,21 @@ async function analyze() {
       body: JSON.stringify({ input, apiKey })
     });
 
+    if (!response.ok) {
+      throw new Error("Server error");
+    }
+
     const data = await response.json();
 
     if (data.status === "safe")
-      showResult("✅ الرابط آمن", "safe");
+      showResult("✅ الرابط أو المحتوى آمن", "safe");
     else if (data.status === "danger")
-      showResult("⚠ خطر محتمل", "danger");
+      showResult("⚠ يوجد خطر محتمل", "danger");
     else
-      showResult("⚠ غير واضح", "warn");
+      showResult("⚠ النتيجة غير واضحة", "warn");
 
   } catch (error) {
-    showResult("حدث خطأ في الاتصال بالخادم", "danger");
+    showResult("❌ تعذر الاتصال بالخادم", "danger");
   }
 
   loader.style.display = "none";
@@ -52,6 +61,11 @@ document.getElementById("apiKey").value =
 
 async function startCamera() {
   const video = document.getElementById("video");
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+  } catch (err) {
+    alert("تعذر تشغيل الكاميرا");
+  }
 }
