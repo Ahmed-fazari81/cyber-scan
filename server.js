@@ -3,9 +3,16 @@ import cors from "cors";
 import fetch from "node-fetch";
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
+/* مسار رئيسي للتأكد أن الخادم يعمل */
+app.get("/", (req, res) => {
+  res.send("CyberShield API is running");
+});
+
+/* مسار التحليل */
 app.post("/analyze", async (req, res) => {
   const { input, apiKey } = req.body;
 
@@ -20,12 +27,16 @@ app.post("/analyze", async (req, res) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `قم بتحليل الرابط أو النص التالي وتحديد هل هو آمن أو خطير أو مشبوه فقط بكلمة واحدة:
-              ${input}`
-            }]
-          }]
+          contents: [
+            {
+              parts: [
+                {
+                  text: `قم بتحليل الرابط أو النص التالي وتحديد هل هو آمن أو خطير أو مشبوه فقط بكلمة واحدة:
+${input}`
+                }
+              ]
+            }
+          ]
         })
       }
     );
@@ -44,6 +55,8 @@ app.post("/analyze", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("CyberShield API running");
+/* مهم جدا لـ Render */
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("CyberShield API running on port", PORT);
 });
