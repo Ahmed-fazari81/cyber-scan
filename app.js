@@ -1,70 +1,57 @@
-let uploadedFileBase64 = null;
-let uploadedMimeType = null;
-let currentLang = "ar";
+const API_URL = "https://cybershield-api.onrender.com/analyze";
 
-function analyzeURLLocally(url) {
-    try {
-        const u = new URL(url);
-        const suspicious = [];
+const resultDiv = document.getElementById("result");
+const loader = document.getElementById("loader");
 
-        if (u.hostname.includes("login") || u.hostname.includes("secure"))
-            suspicious.push("انتحال محتمل");
-
-        if (url.length > 120)
-            suspicious.push("رابط طويل بشكل غير طبيعي");
-
-        if (u.hostname.split(".").length > 3)
-            suspicious.push("نطاق فرعي مريب");
-
-        return suspicious;
-    } catch {
-        return [];
-    }
+function showResult(text, type) {
+  resultDiv.className = "result " + type;
+  resultDiv.innerText = text;
 }
 
-async function startScan() {
-    const inputVal = document.getElementById("mainInput").value;
+async function analyze() {
+  const input = document.getElementById("userInput").value;
+  const apiKey = document.getElementById("apiKey").value;
 
-    if (!inputVal && !uploadedFileBase64) {
-        alert("الرجاء إدخال نص أو ملف");
-        return;
-    }
+  if (!apiKey) {
+    alert("يرجى إدخال API Key");
+    return;
+  }
 
-    const resultBox = document.getElementById("resultBox");
-    const resultDiv = document.getElementById("resultContent");
+  localStorage.setItem("gemini_key", apiKey);
 
-    resultBox.style.display = "none";
+  loader.style.display = "block";
+  resultDiv.innerHTML = "";
 
-    try {
-        const response = await fetch("http://localhost:3000/analyze", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                text: uploadedFileBase64 ? null : inputVal,
-                fileBase64: uploadedFileBase64,
-                mimeType: uploadedMimeType,
-                lang: currentLang
-            })
-        });
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ input, apiKey })
+    });
 
-        const data = await response.json();
-        let resultText = data.result;
+    const data = await response.json();
 
-        if (!uploadedFileBase64) {
-            const localAnalysis = analyzeURLLocally(inputVal);
-            if (localAnalysis.length > 0) {
-                resultText += "\n\nتحليل محلي:\n" + localAnalysis.join("\n");
-            }
-        }
+    if (data.status === "safe")
+      showResult("✅ الرابط آمن", "safe");
+    else if (data.status === "danger")
+      showResult("⚠ خطر محتمل", "danger");
+    else
+      showResult("⚠ غير واضح", "warn");
 
-        resultDiv.innerText = resultText;
-        resultBox.style.display = "block";
+  } catch (error) {
+    showResult("حدث خطأ في الاتصال بالخادم", "danger");
+  }
 
-    } catch (err) {
-        alert("Server Error: " + err.message);
-    }
+  loader.style.display = "none";
 }
 
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js");
+document.getElementById("apiKey").value =
+  localStorage.getItem("gemini_key") || "";
+
+async function startCamera() {
+  const video = document.getElementById("video");
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  video.srcObject = stream;
 }
