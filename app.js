@@ -18,7 +18,7 @@ async function analyze() {
   }
 
   if (!apiKey) {
-    alert("يرجى إدخال API Key");
+    alert("AIzaSyACPFEb_ndAXgZOsTAqiVkkjTIxjbrpb3g");
     return;
   }
 
