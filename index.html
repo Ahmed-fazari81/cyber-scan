@@ -1,99 +1,229 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CyberShield AI</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberScan AI</title>
 
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0f172a">
+<style>
+body{
+font-family:system-ui;
+background:#0f172a;
+color:white;
+margin:0;
+}
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg,#0f172a,#1e293b);
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
+.container{
+max-width:900px;
+margin:auto;
+padding:40px 20px;
+}
 
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #111827;
-      padding: 25px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.5);
-    }
+.card{
+background:#1e293b;
+padding:25px;
+border-radius:14px;
+box-shadow:0 10px 30px rgba(0,0,0,0.4);
+}
 
-    h1 { margin-bottom: 10px; }
-    input, button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: none;
-      font-size: 16px;
-    }
+h1{
+text-align:center;
+margin-bottom:10px;
+}
 
-    input { background: #1f2937; color: white; }
+textarea{
+width:100%;
+padding:15px;
+border-radius:10px;
+border:none;
+margin-top:15px;
+font-size:15px;
+}
 
-    button {
-      background: #22c55e;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
-    }
+button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:10px;
+background:#3b82f6;
+color:white;
+font-size:16px;
+margin-top:10px;
+cursor:pointer;
+}
 
-    button:hover { background: #16a34a; }
+.secondary-btn{
+background:#475569;
+}
 
-    .result {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 10px;
-      font-weight: bold;
-    }
+.result{
+margin-top:20px;
+padding:15px;
+border-radius:10px;
+font-weight:bold;
+text-align:center;
+}
 
-    .safe { background: #065f46; }
-    .danger { background: #7f1d1d; }
-    .warn { background: #92400e; }
+.safe{background:#16a34a;}
+.danger{background:#dc2626;}
+.warn{background:#f59e0b;}
 
-    video {
-      width: 100%;
-      border-radius: 12px;
-      margin-top: 10px;
-    }
+.report{
+margin-top:20px;
+padding:20px;
+border-radius:10px;
+background:#020617;
+white-space:pre-wrap;
+display:none;
+}
 
-    .loader {
-      margin-top: 15px;
-      display: none;
-    }
-  </style>
+/* Footer */
+footer{
+text-align:center;
+padding:20px;
+margin-top:40px;
+color:#94a3b8;
+font-size:14px;
+}
+
+/* Modal */
+.modal{
+position:fixed;
+top:0;
+left:0;
+right:0;
+bottom:0;
+background:rgba(0,0,0,0.6);
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.modal-content{
+background:#1e293b;
+padding:25px;
+border-radius:12px;
+max-width:600px;
+line-height:1.7;
+}
+
+.close-btn{
+background:#ef4444;
+margin-top:15px;
+}
+</style>
 </head>
 
 <body>
+
 <div class="container">
+<div class="card">
 
-  <h1>🛡 CyberShield AI</h1>
-  <p>فحص روابط وملفات مشبوهة باستخدام الذكاء الاصطناعي</p>
+<h1>CyberScan AI Security Analyzer</h1>
 
-  <input type="password" id="apiKey" placeholder="أدخل مفتاح Gemini API الخاص بك">
+<textarea id="userInput" placeholder="الصق رابط أو نص أو رابط صورة أو فيديو"></textarea>
 
-  <input type="text" id="userInput" placeholder="الصق رابط أو نص للفحص">
+<button onclick="analyze()">بدء التحليل الأمني</button>
 
-  <input type="file" id="imageInput" accept="image/*">
+<button class="secondary-btn" onclick="openAbout()">عن التطبيق</button>
+<button class="secondary-btn" onclick="openGuide()">دليل الاستخدام</button>
 
-  <button onclick="startCamera()">📷 مسح QR بالكاميرا</button>
-  <video id="video" autoplay></video>
+<div id="loader" style="display:none;text-align:center;margin-top:10px">
+جارٍ التحليل...
+</div>
 
-  <button onclick="analyze()">🔍 فحص الآن</button>
+<div id="result"></div>
+<div id="report" class="report"></div>
 
-  <div class="loader" id="loader">جاري التحليل...</div>
+</div>
+</div>
 
-  <div id="result"></div>
+<footer>
+تصميم أحمد الفزاري © 2026
+</footer>
 
+<!-- About Modal -->
+<div class="modal" id="aboutModal">
+<div class="modal-content">
+
+<h2>عن التطبيق</h2>
+
+<p>
+CyberScan AI هو نظام تحليل أمني ذكي يعتمد على الذكاء الاصطناعي لتحليل الروابط والمحتوى الرقمي واكتشاف المخاطر السيبرانية.
+</p>
+
+<p>
+يساعد التطبيق المستخدمين على اكتشاف المواقع المشبوهة ومحاولات الاحتيال والمحتوى الضار قبل التفاعل معه.
+</p>
+
+<p>
+ما يميز التطبيق عن الأنظمة التقليدية:
+</p>
+
+<ul>
+<li>تحليل ذكي متعدد الوسائط</li>
+<li>تقييم خطورة رقمي للمحتوى</li>
+<li>إمكانية تقدير المحتوى المولد بالذكاء الاصطناعي</li>
+<li>واجهة استخدام سهلة وسريعة</li>
+<li>يعمل مباشرة من المتصفح بدون تثبيت</li>
+</ul>
+
+<p>
+يهدف المشروع إلى تعزيز الوعي بالأمن السيبراني وتوفير أداة حماية ذكية للطلاب والمستخدمين.
+</p>
+
+<button class="close-btn" onclick="closeAbout()">إغلاق</button>
+
+</div>
+</div>
+
+<!-- Guide Modal -->
+<div class="modal" id="guideModal">
+<div class="modal-content">
+
+<h2>دليل الاستخدام</h2>
+
+<p><strong>طريقة استخدام التطبيق:</strong></p>
+
+<ol>
+<li>الصق الرابط أو النص أو رابط الصورة أو الفيديو في مربع الإدخال.</li>
+<li>اضغط على زر "بدء التحليل الأمني".</li>
+<li>انتظر ظهور نتيجة التحليل.</li>
+<li>اقرأ التقرير التفصيلي لفهم مستوى الخطورة.</li>
+</ol>
+
+<p><strong>نصائح:</strong></p>
+
+<ul>
+<li>يفضل إدخال روابط كاملة تبدأ بـ https</li>
+<li>لا تشارك بيانات حساسة في التحليل</li>
+<li>استخدم النتائج كمؤشر أمني وليس كحكم نهائي</li>
+</ul>
+
+<button class="close-btn" onclick="closeGuide()">إغلاق</button>
+
+</div>
 </div>
 
 <script src="app.js"></script>
+
+<script>
+function openAbout(){
+document.getElementById("aboutModal").style.display="flex";
+}
+
+function closeAbout(){
+document.getElementById("aboutModal").style.display="none";
+}
+
+function openGuide(){
+document.getElementById("guideModal").style.display="flex";
+}
+
+function closeGuide(){
+document.getElementById("guideModal").style.display="none";
+}
+</script>
+
 </body>
 </html>
