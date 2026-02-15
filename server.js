@@ -4,15 +4,16 @@ import fetch from "node-fetch";
 
 const app = express();
 
+// إعدادات أساسية
 app.use(cors());
 app.use(express.json());
 
-/* مسار رئيسي للتأكد أن الخادم يعمل */
+// مسار اختبار للتأكد أن الخادم يعمل
 app.get("/", (req, res) => {
   res.send("CyberShield API is running");
 });
 
-/* مسار التحليل */
+// مسار التحليل
 app.post("/analyze", async (req, res) => {
   const { input, apiKey } = req.body;
 
@@ -31,8 +32,19 @@ app.post("/analyze", async (req, res) => {
             {
               parts: [
                 {
-                  text: `قم بتحليل الرابط أو النص التالي وتحديد هل هو آمن أو خطير أو مشبوه فقط بكلمة واحدة:
-${input}`
+                  text: `
+قم بتحليل الرابط أو النص التالي.
+
+أجب بكلمة واحدة فقط من هذه الكلمات:
+آمن
+خطير
+مشبوه
+
+بدون أي شرح إضافي.
+
+النص:
+${input}
+`
                 }
               ]
             }
@@ -42,21 +54,31 @@ ${input}`
     );
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const text =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
     let status = "warn";
-    if (text.includes("آمن")) status = "safe";
-    if (text.includes("خطير")) status = "danger";
 
-    res.json({ status, raw: text });
+    if (text.includes("آمن")) status = "safe";
+    else if (text.includes("خطير")) status = "danger";
+    else if (text.includes("مشبوه")) status = "warn";
+
+    res.json({
+      status,
+      raw: text
+    });
 
   } catch (error) {
-    res.status(500).json({ error: "AI analysis failed" });
+    console.error(error);
+    res.status(500).json({
+      error: "AI analysis failed"
+    });
   }
 });
 
-/* مهم جدا لـ Render */
+// تشغيل الخادم (مهم لـ Render)
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log("CyberShield API running on port", PORT);
+  console.log("CyberShield API is running on port " + PORT);
 });
