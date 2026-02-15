@@ -4,26 +4,31 @@ import fetch from "node-fetch";
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 
-// فحص أن الخادم يعمل
 app.get("/", (req, res) => {
-  res.send("CyberShield API is running");
+  res.send("CyberScan AI Security Engine Running");
 });
 
 app.post("/analyze", async (req, res) => {
   try {
     const { input, apiKey } = req.body;
 
-    if (!input || !apiKey) {
-      return res.status(400).json({ status: "error", message: "Missing input or API key" });
-    }
+    if (!input || !apiKey)
+      return res.status(400).json({ error: "Missing data" });
 
-    const prompt = `
-حلل الرابط أو النص التالي وحدد هل هو آمن أم خطير أو مشبوه.
-أجب بكلمة واحدة فقط: آمن أو خطير أو مشبوه أو Safe أو Danger أو Suspicious.
+    let prompt = `
+أنت نظام تحليل أمني سيبراني احترافي.
 
-النص:
+قم بتحليل الإدخال التالي وأعط تقريرًا بصيغة JSON فقط يحتوي:
+
+status: safe / suspicious / dangerous
+risk_score: رقم من 0 إلى 100
+summary: وصف مختصر
+details: تحليل تقني
+ai_generated_probability: نسبة احتمال أن يكون المحتوى مولد بالذكاء الاصطناعي (إن كان صورة أو فيديو)
+
+الإدخال:
 ${input}
 `;
 
@@ -43,47 +48,18 @@ ${input}
     );
 
     const data = await response.json();
-
     const text =
       data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    const normalized = text
-      .toLowerCase()
-      .replace(/[^\u0600-\u06FFa-z\s]/g, "")
-      .replace(/[\u064B-\u0652]/g, "")
-      .trim();
-
-    let status = "warn";
-
-    if (
-      normalized.includes("امن") ||
-      normalized.includes("آمن") ||
-      normalized.includes("safe")
-    ) {
-      status = "safe";
-    } else if (
-      normalized.includes("خطير") ||
-      normalized.includes("خطر") ||
-      normalized.includes("danger")
-    ) {
-      status = "danger";
-    } else if (
-      normalized.includes("مشبوه") ||
-      normalized.includes("suspicious")
-    ) {
-      status = "warn";
-    }
-
     res.json({
-      status: status,
-      ai_response: text
+      raw: text
     });
 
-  } catch (error) {
-    console.error("Server Error:", error);
-    res.status(500).json({ status: "error" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "analysis failed" });
   }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Server running on port " + PORT));
+app.listen(PORT, () => console.log("CyberScan Server Ready"));
