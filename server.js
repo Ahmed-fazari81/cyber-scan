@@ -4,11 +4,10 @@ import fetch from "node-fetch";
 
 const app = express();
 
-// إعدادات أساسية
 app.use(cors());
 app.use(express.json());
 
-// مسار اختبار للتأكد أن الخادم يعمل
+// مسار اختبار
 app.get("/", (req, res) => {
   res.send("CyberShield API is running");
 });
@@ -35,12 +34,12 @@ app.post("/analyze", async (req, res) => {
                   text: `
 قم بتحليل الرابط أو النص التالي.
 
-أجب بكلمة واحدة فقط من هذه الكلمات:
+أجب بكلمة واحدة أو جملة قصيرة فقط، ويفضل إحدى هذه الكلمات:
 آمن
 خطير
 مشبوه
 
-بدون أي شرح إضافي.
+بدون شرح إضافي.
 
 النص:
 ${input}
@@ -54,14 +53,22 @@ ${input}
     );
 
     const data = await response.json();
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+    // 🔥 تطبيع النص العربي (إزالة التشكيل والرموز)
+    const normalized = text
+      .replace(/[^\u0600-\u06FF\s]/g, "") // إزالة الرموز غير العربية
+      .replace(/[\u064B-\u0652]/g, "")    // إزالة التشكيل
+      .trim();
 
     let status = "warn";
 
-    if (text.includes("آمن")) status = "safe";
-    else if (text.includes("خطير")) status = "danger";
-    else if (text.includes("مشبوه")) status = "warn";
+    if (normalized.includes("امن") || normalized.includes("آمن"))
+      status = "safe";
+    else if (normalized.includes("خطير") || normalized.includes("خطر"))
+      status = "danger";
+    else if (normalized.includes("مشبوه"))
+      status = "warn";
 
     res.json({
       status,
@@ -70,13 +77,10 @@ ${input}
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      error: "AI analysis failed"
-    });
+    res.status(500).json({ error: "AI analysis failed" });
   }
 });
 
-// تشغيل الخادم (مهم لـ Render)
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
