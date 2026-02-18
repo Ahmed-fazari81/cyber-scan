@@ -1,7 +1,7 @@
 {
-  "name": "الدرع الأمين | CyberShield",
+  "name": "الدرع السيبراني | CyberShield",
   "short_name": "CyberShield",
-  "description": "تطبيق أمني لفحص الروابط والملفات وكشف التزييف العميق باستخدام الذكاء الاصطناعي.",
+  "description": "منصة التحليل الأمني المتقدمة بالذكاء الاصطناعي",
   "id": "/cybershield/",
   "start_url": "./index.html",
   "display": "standalone",
@@ -10,7 +10,6 @@
   "orientation": "portrait-primary",
   "lang": "ar",
   "dir": "rtl",
-  "categories": ["security", "productivity", "utilities"],
   "icons": [
     {
       "src": "icon-192.png",
@@ -24,5 +23,15 @@
       "sizes": "512x512",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }
