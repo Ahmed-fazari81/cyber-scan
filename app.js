@@ -1,25 +1,19 @@
-// URL الخادم (يتم استبداله برابط Render الخاص بك)
-// تأكد من أن رابط الخادم لا ينتهي بـ /
-const SERVER_URL = "https://cyber-scan.onrender.com"; 
+const SERVER_URL = "https://cyber-scan.onrender.com"; // تأكد من أن الرابط صحيح
 
-let currentMode = 'text'; // text, image, qr
+let currentMode = 'text'; 
 let currentImageBase64 = null;
 let html5QrCode;
 
-// عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
-    // التحقق من المشاركة عبر واتساب (Share Target)
+    // التحقق من المشاركة الخارجية
     const params = new URLSearchParams(window.location.search);
-    const sharedText = params.get('text') || params.get('url') || params.get('title');
-    
+    const sharedText = params.get('text') || params.get('url');
     if (sharedText) {
         document.getElementById('textInput').value = sharedText;
-        switchTab('text');
     }
-
     // التحقق من المفتاح
     if(!localStorage.getItem("apiKey")){
-        openSettings();
+        setTimeout(openSettings, 1000);
     }
 });
 
@@ -30,14 +24,10 @@ function switchTab(mode) {
     
     event.target.classList.add('active');
     document.getElementById(`tab-${mode}`).classList.add('active');
-
-    // إيقاف الكاميرا إذا تم تغيير التبويب
-    if(mode !== 'qr' && html5QrCode) {
-        html5QrCode.stop().catch(()=>{});
-    }
+    
+    if(mode !== 'qr' && html5QrCode) html5QrCode.stop().catch(()=>{});
 }
 
-// معالجة الصور
 function previewImage(input) {
     const file = input.files[0];
     if (file) {
@@ -51,50 +41,50 @@ function previewImage(input) {
     }
 }
 
-// معالجة QR Code
 function startQR() {
     html5QrCode = new Html5Qrcode("qr-reader");
     html5QrCode.start(
         { facingMode: "environment" }, 
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
-            // Success
             document.getElementById("qr-result").innerText = decodedText;
-            document.getElementById("textInput").value = decodedText; // نضع القيمة في النص للتحليل
-            currentMode = 'text'; // نحول الوضع لنص لأننا استخرجنا الرابط
+            document.getElementById("textInput").value = decodedText;
+            currentMode = 'text';
             html5QrCode.stop();
-            // تشغيل هزاز الهاتف للمتعة
             if (navigator.vibrate) navigator.vibrate(200);
         },
-        (errorMessage) => {
-            // Error scanning
-        }
-    ).catch(err => {
-        alert("لا يمكن الوصول للكاميرا");
-    });
+        () => {}
+    ).catch(() => alert("لا يمكن الوصول للكاميرا"));
 }
 
-// دالة التحليل الرئيسية
+// زر فحص جديد
+function resetApp() {
+    document.getElementById('resultCard').style.display = 'none';
+    document.getElementById('inputSection').style.display = 'block';
+    document.getElementById('textInput').value = '';
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('fileInput').value = '';
+    currentImageBase64 = null;
+    window.scrollTo(0, 0);
+}
+
 async function processAnalysis() {
     const apiKey = localStorage.getItem("apiKey");
     if (!apiKey) return openSettings();
 
     let payload = {};
-    
     if (currentMode === 'text' || currentMode === 'qr') {
         const text = document.getElementById('textInput').value;
-        if (!text) return alert("الرجاء إدخال نص أو رابط");
+        if (!text) return alert("الرجاء إدخال بيانات للفحص");
         payload = { input: text, type: 'text', apiKey };
-    } 
-    else if (currentMode === 'image') {
+    } else {
         if (!currentImageBase64) return alert("الرجاء اختيار صورة");
         payload = { input: currentImageBase64, type: 'image', apiKey };
     }
 
-    // واجهة المستخدم
+    // إخفاء المدخلات وإظهار التحميل
+    document.getElementById('inputSection').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
-    document.getElementById('resultCard').style.display = 'none';
-    document.getElementById('analyzeBtn').disabled = true;
 
     try {
         const res = await fetch(`${SERVER_URL}/analyze`, {
@@ -107,11 +97,10 @@ async function processAnalysis() {
         renderResult(data);
 
     } catch (error) {
-        alert("حدث خطأ في الاتصال بالخادم");
-        console.error(error);
+        alert("خطأ في الاتصال بالخادم");
+        resetApp(); // العودة للبداية عند الخطأ
     } finally {
         document.getElementById('loader').style.display = 'none';
-        document.getElementById('analyzeBtn').disabled = false;
     }
 }
 
@@ -122,31 +111,34 @@ function renderResult(data) {
 
     card.style.display = 'block';
     
-    // الألوان
-    let color = '#10b981'; // Safe
-    if (data.status === 'suspicious') color = '#f59e0b';
-    if (data.status === 'dangerous') color = '#ef4444';
+    // التعامل مع البيانات المفقودة لتجنب undefined
+    const score = data.risk_score || 0;
+    const status = data.status || "unknown";
+    const summary = data.summary || "لا يوجد ملخص متاح";
+    const details = data.technical_details || "لا توجد تفاصيل تقنية";
+    const rec = data.recommendation || "توخ الحذر دائماً";
 
-    // تحديث الدائرة البيانية
-    const degree = (data.risk_score / 100) * 360;
+    let color = '#10b981'; // Safe
+    if (status === 'suspicious') color = '#f59e0b';
+    if (status === 'dangerous') color = '#ef4444';
+
+    const degree = (score / 100) * 360;
     scoreCircle.style.background = `conic-gradient(${color} ${degree}deg, #334155 0deg)`;
-    document.getElementById('scoreValue').innerText = data.risk_score;
+    document.getElementById('scoreValue').innerText = score;
     document.getElementById('scoreValue').style.color = color;
 
-    // النصوص
-    badge.innerText = data.type_detected || data.status;
+    badge.innerText = data.type_detected || "تحليل عام";
     badge.style.background = color;
     
     document.getElementById('resultTitle').innerText = 
-        data.status === 'safe' ? "المحتوى يبدو آمناً" : 
-        data.status === 'dangerous' ? "تهديد أمني مكتشف!" : "محتوى مشبوه";
+        status === 'safe' ? "المحتوى آمن" : 
+        status === 'dangerous' ? "خطر مرتفع!" : "محتوى مشبوه";
 
-    document.getElementById('resultSummary').innerText = data.summary;
-    document.getElementById('resultDetails').innerText = data.technical_details;
-    document.getElementById('resultRec').innerText = data.recommendation;
+    document.getElementById('resultSummary').innerText = summary;
+    document.getElementById('resultDetails').innerText = details;
+    document.getElementById('resultRec').innerText = rec;
 }
 
-// إعدادات المفتاح
 function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
 function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
 function saveKey() {
