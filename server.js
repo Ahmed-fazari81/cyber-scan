@@ -4,7 +4,6 @@ import fetch from "node-fetch";
 
 const app = express();
 app.use(cors());
-// زيادة الحد المسموح به لاستقبال الصور
 app.use(express.json({ limit: "50mb" }));
 
 app.get("/", (req, res) => {
@@ -13,39 +12,41 @@ app.get("/", (req, res) => {
 
 app.post("/analyze", async (req, res) => {
   try {
-    // type: 'text' | 'image'
     const { input, type, apiKey } = req.body;
 
     if (!input || !apiKey)
       return res.status(400).json({ error: "بيانات ناقصة" });
 
-    // هندسة الأوامر (System Prompt)
+    // هندسة الأوامر بدقة عالية
     const systemPrompt = `
     أنت خبير أمن سيبراني (Cyber Security Expert) ومحقق جنائي رقمي.
-    مهمتك تحليل المدخلات سواء كانت روابط، نصوص، أو صور.
+    مهمتك تحليل المدخلات بدقة.
+    
+    التعليمات:
+    1. قم بتحليل الرابط أو النص أو الصورة.
+    2. إذا كان الرابط يبدأ بـ http وليس https، اعتبره "suspicious" (مشبوه) لأنه غير مشفر، واشرح ذلك.
+    3. أكتب النتيجة باللغة العربية فقط.
+    4. يجب أن يكون الرد بصيغة JSON حصراً (بدون markdown).
 
-    قم بإرجاع النتيجة بصيغة JSON *فقط* وبدون أي تنسيق Markdown (مثل \`\`\`json).
-    الهيكل المطلوب:
+    الهيكل المطلوب للرد (JSON):
     {
-      "status": "safe" | "suspicious" | "dangerous",
-      "risk_score": رقم من 0 لـ 100,
-      "type_detected": "Phishing" | "Malware" | "Deepfake" | "Safe Content" | "Scam",
-      "summary": "ملخص عربي دقيق",
-      "technical_details": "تفاصيل تقنية (لماذا هذا القرار؟)",
-      "recommendation": "نصيحة للمستخدم"
+      "status": "safe" أو "suspicious" أو "dangerous",
+      "risk_score": رقم من 0 إلى 100,
+      "type_detected": "Phishing" أو "Malware" أو "Encryption Issue" أو "Safe",
+      "summary": "ملخص عربي واضح للنتيجة",
+      "technical_details": "شرح تقني (مثلا: الشهادة منتهية، البروتوكول غير آمن، الكود سليم...)",
+      "recommendation": "خطوات عملية للمستخدم"
     }
     `;
 
     let requestBody;
 
     if (type === "image") {
-        // إزالة بادئة Base64 إذا وجدت
         const base64Data = input.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-        
         requestBody = {
             contents: [{
                 parts: [
-                    { text: systemPrompt + "\n حلل هذه الصورة. هل هي مفبركة (Deepfake)؟ هل تحتوي على احتيال؟" },
+                    { text: systemPrompt + "\n حلل هذه الصورة:" },
                     { inline_data: { mime_type: "image/jpeg", data: base64Data } }
                 ]
             }]
@@ -53,7 +54,7 @@ app.post("/analyze", async (req, res) => {
     } else {
         requestBody = {
             contents: [{
-                parts: [{ text: `${systemPrompt}\n\nالإدخال للتحليل: ${input}` }]
+                parts: [{ text: `${systemPrompt}\n\nالمدخل المراد فحصه: ${input}` }]
             }]
         };
     }
@@ -69,29 +70,38 @@ app.post("/analyze", async (req, res) => {
 
     const data = await response.json();
     
-    // استخراج النص ومحاولة تنظيفه
-    let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-    // تنظيف الـ Markdown إن وجد
-    rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+    // استخراج النص الخام
+    let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    // --- (التصحيح الجوهري) دالة استخراج JSON بدقة ---
+    // نبحث عن أول قوس { وآخر قوس } ونتجاهل كل شيء قبلهما أو بعدهما
+    const firstBrace = rawText.indexOf('{');
+    const lastBrace = rawText.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        rawText = rawText.substring(firstBrace, lastBrace + 1);
+    }
+    // ------------------------------------------------
 
     try {
         const jsonResult = JSON.parse(rawText);
         res.json(jsonResult);
     } catch (e) {
-        // في حال فشل الذكاء الاصطناعي في الالتزام بـ JSON
+        console.error("JSON Parse Error:", rawText);
+        // في حال فشل التحليل، نعيد رسالة خطأ منظمة بدلاً من الانهيار
         res.json({
             status: "suspicious",
             risk_score: 50,
             type_detected: "Analysis Error",
-            summary: "حدث خطأ في تنسيق النتائج، لكن يرجى الحذر.",
-            technical_details: rawText,
-            recommendation: "تجنب التعامل مع المحتوى حتى التأكد."
+            summary: "لم نتمكن من قراءة البيانات بشكل دقيق، لكن كن حذراً.",
+            technical_details: "فشل النظام في معالجة رد الذكاء الاصطناعي: " + rawText.substring(0, 50) + "...",
+            recommendation: "حاول مرة أخرى أو تأكد من الرابط."
         });
     }
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "فشل التحليل الداخلي" });
+    res.status(500).json({ error: "فشل داخلي في الخادم" });
   }
 });
 
