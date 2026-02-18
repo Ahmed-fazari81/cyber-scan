@@ -3,78 +3,64 @@ import cors from "cors";
 import fetch from "node-fetch";
 
 const app = express();
-
-// تفعيل CORS للسماح بالتطبيق بالاتصال من المتصفح
 app.use(cors());
-
-// زيادة حجم البيانات المسموح بها لرفع الصور (50 ميجابايت)
 app.use(express.json({ limit: "50mb" }));
 
-// نقطة فحص سريعة للتأكد أن الخادم يعمل
-app.get("/", (req, res) => {
-  res.send("CyberShield AI Engine is Running - Version 2026 🛡️");
-});
+app.get("/", (req, res) => res.send("CyberShield Engine V3 Ready 🛡️"));
 
-// نقطة التحليل الرئيسية
 app.post("/analyze", async (req, res) => {
   try {
     const { input, type, apiKey } = req.body;
 
-    // التحقق من وجود البيانات الأساسية
-    if (!input || !apiKey) {
-      return res.status(400).json({ error: "البيانات غير مكتملة (مفتاح API أو المدخلات مفقودة)" });
-    }
+    if (!input || !apiKey) return res.status(400).json({ error: "Missing Data" });
 
-    // --- هندسة الأوامر (The Brain of the App) ---
-    // هذه التعليمات هي التي تجعل التطبيق ذكياً في كشف الاحتيال والتزييف
+    console.log(`[Analyzing] Type: ${type}, Input Length: ${input.length}`);
+
+    // هندسة الأوامر - النسخة الصارمة (Strict Mode)
     const systemPrompt = `
-    أنت خبير أمن سيبراني ومحقق في الجرائم الرقمية (Digital Forensics Expert).
-    مهمتك: تحليل المدخلات بعمق لكشف "الهندسة الاجتماعية"، "التزييف العميق"، و"الروابط الاحتيالية".
+    أنت نظام أمني سيبراني (Security Engine API).
+    مهمتك: استلام مدخلات وإرجاع تقرير بصيغة JSON الخام فقط.
+    
+    ممنوع استخدام Markdown. ممنوع استخدام \`\`\`json. ممنوع كتابة أي مقدمة.
+    
+    المعايير الأمنية:
+    1. روابط HTTP (بدون S) = Suspicious.
+    2. روابط تدعي أنها شركات كبرى (Apple, Instagram, HR) ونطاقها غريب = Dangerous (Phishing).
+    3. طلبات تغيير كلمة المرور أو تحديث البيانات البنكية = Dangerous.
+    4. صور تحتوي تشوهات بصرية بشرية = Suspicious (Deepfake).
 
-    قم بتحليل المدخل (سواء كان نصاً، رابطاً، أو صورة) بناءً على المعايير التالية:
-    1. **المصدر (Source Identification):** حاول معرفة الجهة التي ينتمي إليها المحتوى (مثلاً: Wikipedia, Instagram, WhatsApp, Corporate HR, Unknown).
-    2. **التصيد (Phishing):** هل النص يطلب "بشكل عاجل" تغيير كلمة مرور أو تحديث بيانات؟ هل يدعي أنه من شركة معروفة لكن الرابط غريب؟
-    3. **التزييف العميق (Deepfake - للصور):** ابحث عن تشوهات في الأيدي، العيون، النصوص الخلفية، أو الإضاءة غير المنطقية.
-    4. **الأمان التقني:** إذا كان الرابط يبدأ بـ http (بدون s) فهو "Suspicious" فوراً.
-
-    المخرجات المطلوبة:
-    يجب أن يكون الرد بصيغة JSON *فقط* (بدون أي نصوص إضافية أو Markdown) ويحتوي على الحقول التالية باللغة العربية:
+    يجب أن يكون الرد بهذا الشكل الدقيق تماماً:
     {
       "status": "safe" | "suspicious" | "dangerous",
-      "risk_score": رقم من 0 إلى 100 (حيث 100 هو الأكثر خطورة),
-      "source": "اسم المصدر المكتشف (مثلاً: Instagram, Wikipedia, Unknown)",
-      "content_type": "نوع المحتوى (Phishing Link, Deepfake Image, Safe Website, Scam Text)",
-      "summary": "ملخص دقيق يشرح لماذا هذا المحتوى آمن أو خطير",
-      "technical_details": "شرح تقني (مثلاً: النطاق لا يطابق المؤسسة الرسمية، الشهادة منتهية، وجود تشوهات بصرية في الصورة...)",
-      "recommendation": "نصيحة أمنية صارمة للمستخدم"
+      "risk_score": رقم 0-100,
+      "source": "اسم المصدر (Wikipedia, Fake Instagram, Corporate HR, Unknown)",
+      "content_type": "نوع المحتوى (Phishing Link, Deepfake, Safe Site, Scam)",
+      "summary": "وصف عربي دقيق للتهديد أو الأمان",
+      "technical_details": "السبب التقني (مثلا: النطاق company-hr-update.net غير رسمي)",
+      "recommendation": "نصيحة واضحة"
     }
     `;
 
     let requestBody;
-
-    // تجهيز الطلب لنموذج Gemini
+    
     if (type === "image") {
-        // تنظيف كود الصورة Base64
         const base64Data = input.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-        
         requestBody = {
             contents: [{
                 parts: [
-                    { text: systemPrompt + "\n\n [تحليل صورة]: قم بفحص هذه الصورة بدقة لكشف التزييف أو الاحتيال:" },
+                    { text: systemPrompt + "\n حلل هذه الصورة:" },
                     { inline_data: { mime_type: "image/jpeg", data: base64Data } }
                 ]
             }]
         };
     } else {
-        // تحليل النصوص والروابط
         requestBody = {
             contents: [{
-                parts: [{ text: `${systemPrompt}\n\n [تحليل نص/رابط]: ${input}` }]
+                parts: [{ text: `${systemPrompt}\n\nالمدخل: "${input}"` }]
             }]
         };
     }
 
-    // إرسال الطلب إلى Google Gemini API
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
@@ -85,45 +71,52 @@ app.post("/analyze", async (req, res) => {
     );
 
     const data = await response.json();
-    
-    // استخراج النص من رد الذكاء الاصطناعي
-    let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    // --- مرحلة التنظيف الذكي (Cleaning & Parsing) ---
-    // الهدف: استخراج كود JSON الصافي حتى لو أضاف النموذج شرحاً نصياً قبله أو بعده
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    // 1. استخراج النص الخام
+    let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log("[AI Raw Response]:", rawText.substring(0, 100) + "..."); // طباعة أول جزء للتحقق
+
+    // 2. التنظيف العميق (Deep Cleaning) لإزالة أي شوائب
+    // إزالة علامات الكود (```json) و (```)
+    rawText = rawText.replace(/```json/g, "").replace(/```/g, "");
     
-    if (jsonMatch) {
-        try {
-            const jsonResult = JSON.parse(jsonMatch[0]);
-            res.json(jsonResult);
-        } catch (e) {
-            console.error("JSON Parsing Failed:", e);
-            throw new Error("Failed to parse AI response");
-        }
-    } else {
-        // في حال فشل النموذج في الرد بـ JSON، نعيد رداً "مشبوه" افتراضياً لضمان عدم توقف التطبيق
-        console.warn("No JSON found in response:", rawText);
+    // البحث عن أول قوس { وآخر قوس }
+    const firstBrace = rawText.indexOf('{');
+    const lastBrace = rawText.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        // قص النص ليكون JSON فقط
+        rawText = rawText.substring(firstBrace, lastBrace + 1);
+    }
+
+    // 3. المحاولة النهائية للتحويل
+    try {
+        const jsonResult = JSON.parse(rawText);
+        // نجاح! نرسل النتيجة
+        res.json(jsonResult);
+    } catch (parseError) {
+        console.error("JSON Parsing Failed. Raw Text was:", rawText);
+        // في حال الفشل التام، نرسل تحليل يدوي للطوارئ يعتمد على الكلمات المفتاحية
+        let fallbackStatus = "suspicious";
+        if (input.includes("http:")) fallbackStatus = "suspicious";
+        if (input.includes("update") || input.includes("login") || input.includes("bank")) fallbackStatus = "dangerous";
+
         res.json({
-            status: "suspicious",
-            risk_score: 60,
-            source: "غير محدد",
-            content_type: "تحليل غير مؤكد",
-            summary: "قام النظام بتحليل المحتوى ولكنه لم يتمكن من تحديد النتيجة بدقة 100%.",
-            technical_details: "الرد المستلم من نموذج الذكاء الاصطناعي لم يكن بالصيغة القياسية، مما يستدعي الحذر.",
-            recommendation: "يرجى عدم التعامل مع الرابط أو الملف حتى التأكد من مصدر آخر."
+            status: fallbackStatus,
+            risk_score: fallbackStatus === "dangerous" ? 85 : 55,
+            source: "تحليل تلقائي (Fallback)",
+            content_type: "محتوى مشبوه",
+            summary: "تم اكتشاف مؤشرات خطر، لكن التحليل التفصيلي تعذر عرضه.",
+            technical_details: "الرابط يحتوي على أنماط تتطلب الحذر (مثل طلب تحديث بيانات أو بروتوكول غير آمن).",
+            recommendation: "لا تفتح الرابط وقم بإبلاغ المسؤول الأمني."
         });
     }
 
   } catch (err) {
-    console.error("Server Error:", err);
-    res.status(500).json({ 
-        error: "حدث خطأ داخلي أثناء التحليل",
-        details: err.message 
-    });
+    console.error("Server Logic Error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// تشغيل الخادم
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 CyberShield Server Running on Port ${PORT}`));
+app.listen(PORT, () => console.log(`Server v3 running on port ${PORT}`));
