@@ -1,229 +1,320 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CyberScan AI</title>
+<title>الدرع السيبراني | CyberShield</title>
+<link rel="manifest" href="manifest.json">
+<!-- خطوط جوجل -->
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+<!-- مكتبة مسح QR -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 <style>
-body{
-font-family:system-ui;
-background:#0f172a;
-color:white;
-margin:0;
+:root {
+    --primary: #3b82f6;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #f8fafc;
 }
 
-.container{
-max-width:900px;
-margin:auto;
-padding:40px 20px;
+body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-.card{
-background:#1e293b;
-padding:25px;
-border-radius:14px;
-box-shadow:0 10px 30px rgba(0,0,0,0.4);
+/* Header */
+header {
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 15px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-h1{
-text-align:center;
-margin-bottom:10px;
+.logo {
+    font-weight: bold;
+    font-size: 1.2rem;
+    background: linear-gradient(45deg, #3b82f6, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-textarea{
-width:100%;
-padding:15px;
-border-radius:10px;
-border:none;
-margin-top:15px;
-font-size:15px;
+.settings-icon {
+    cursor: pointer;
+    font-size: 1.5rem;
 }
 
-button{
-width:100%;
-padding:14px;
-border:none;
-border-radius:10px;
-background:#3b82f6;
-color:white;
-font-size:16px;
-margin-top:10px;
-cursor:pointer;
+/* Main Container */
+.container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 0 20px;
+    flex: 1;
 }
 
-.secondary-btn{
-background:#475569;
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: #0f172a;
+    padding: 5px;
+    border-radius: 12px;
+    border: 1px solid #334155;
 }
 
-.result{
-margin-top:20px;
-padding:15px;
-border-radius:10px;
-font-weight:bold;
-text-align:center;
+.tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: 0.3s;
+    font-family: inherit;
+    font-weight: bold;
 }
 
-.safe{background:#16a34a;}
-.danger{background:#dc2626;}
-.warn{background:#f59e0b;}
-
-.report{
-margin-top:20px;
-padding:20px;
-border-radius:10px;
-background:#020617;
-white-space:pre-wrap;
-display:none;
+.tab.active {
+    background: var(--card);
+    color: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
-/* Footer */
-footer{
-text-align:center;
-padding:20px;
-margin-top:40px;
-color:#94a3b8;
-font-size:14px;
+/* Input Area */
+.input-group {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+.input-group.active { display: block; }
+
+textarea {
+    width: 100%;
+    padding: 15px;
+    background: var(--card);
+    border: 1px solid #334155;
+    color: white;
+    border-radius: 12px;
+    height: 100px;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.file-drop {
+    border: 2px dashed #334155;
+    padding: 30px;
+    text-align: center;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--card);
+}
+
+#qr-reader {
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+/* Buttons */
+.main-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(45deg, var(--primary), #2563eb);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-top: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    transition: transform 0.2s;
+}
+
+.main-btn:active { transform: scale(0.98); }
+
+/* Results */
+.result-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+    display: none;
+    border: 1px solid #334155;
+}
+
+.score-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: conic-gradient(var(--success) 0%, #334155 0%);
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.score-inner {
+    width: 80px;
+    height: 80px;
+    background: var(--card);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    display: inline-block;
+    margin-bottom: 10px;
 }
 
 /* Modal */
-.modal{
-position:fixed;
-top:0;
-left:0;
-right:0;
-bottom:0;
-background:rgba(0,0,0,0.6);
-display:none;
-align-items:center;
-justify-content:center;
+.modal {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+.modal-content {
+    background: var(--card);
+    padding: 25px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+}
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: white;
+    box-sizing: border-box; /* Fix padding issue */
 }
 
-.modal-content{
-background:#1e293b;
-padding:25px;
-border-radius:12px;
-max-width:600px;
-line-height:1.7;
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-.close-btn{
-background:#ef4444;
-margin-top:15px;
+/* Footer */
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #64748b;
+    font-size: 0.9rem;
 }
 </style>
 </head>
-
 <body>
 
+<header>
+    <div class="logo">🛡️ CyberShield</div>
+    <div class="settings-icon" onclick="openSettings()">⚙️</div>
+</header>
+
 <div class="container">
-<div class="card">
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('text')">نص / رابط</button>
+        <button class="tab" onclick="switchTab('image')">صورة</button>
+        <button class="tab" onclick="switchTab('qr')">QR Code</button>
+    </div>
 
-<h1>CyberScan AI Security Analyzer</h1>
+    <!-- Text/Link Input -->
+    <div id="tab-text" class="input-group active">
+        <textarea id="textInput" placeholder="الصق الرابط أو النص هنا..."></textarea>
+    </div>
 
-<textarea id="userInput" placeholder="الصق رابط أو نص أو رابط صورة أو فيديو"></textarea>
+    <!-- Image Input -->
+    <div id="tab-image" class="input-group">
+        <div class="file-drop" onclick="document.getElementById('fileInput').click()">
+            <p>📸 اضغط لرفع صورة</p>
+            <p style="font-size:0.8rem; color:#64748b">يتم تحليل الصور للكشف عن التزييف والاحتيال</p>
+            <input type="file" id="fileInput" hidden accept="image/*" onchange="previewImage(this)">
+        </div>
+        <img id="imagePreview" style="width:100%; margin-top:10px; border-radius:10px; display:none;">
+    </div>
 
-<button onclick="analyze()">بدء التحليل الأمني</button>
+    <!-- QR Input -->
+    <div id="tab-qr" class="input-group">
+        <div id="qr-reader"></div>
+        <p id="qr-result" style="text-align:center; color:var(--primary); word-break:break-all;"></p>
+        <button class="secondary-btn" style="width:100%; padding:10px; background:#334155; border:none; color:white; border-radius:8px;" onclick="startQR()">📷 فتح الكاميرا</button>
+    </div>
 
-<button class="secondary-btn" onclick="openAbout()">عن التطبيق</button>
-<button class="secondary-btn" onclick="openGuide()">دليل الاستخدام</button>
+    <button id="analyzeBtn" class="main-btn" onclick="processAnalysis()">🛡️ فحص الآن</button>
 
-<div id="loader" style="display:none;text-align:center;margin-top:10px">
-جارٍ التحليل...
-</div>
+    <!-- Loading -->
+    <div id="loader" style="display:none; text-align:center; margin-top:20px;">
+        <p>جارٍ التحليل السيبراني...</p>
+        <div style="width:50px; height:50px; border:3px solid var(--primary); border-top-color:transparent; border-radius:50%; margin:auto; animation:spin 1s linear infinite;"></div>
+    </div>
 
-<div id="result"></div>
-<div id="report" class="report"></div>
-
-</div>
+    <!-- Results -->
+    <div id="resultCard" class="result-card">
+        <div class="score-circle" id="scoreCircle">
+            <div class="score-inner" id="scoreValue">0%</div>
+        </div>
+        <div style="text-align:center;">
+            <span id="badgeStatus" class="badge">آمن</span>
+            <h3 id="resultTitle">نتيجة التحليل</h3>
+        </div>
+        <p id="resultSummary" style="line-height:1.6; color:#cbd5e1;"></p>
+        
+        <div style="background:#0f172a; padding:15px; border-radius:10px; margin-top:15px;">
+            <h4 style="margin-top:0; color:var(--primary)">🔍 التفاصيل التقنية:</h4>
+            <p id="resultDetails" style="font-size:0.9rem; color:#94a3b8;"></p>
+            <h4 style="margin-bottom:5px; color:var(--warn)">💡 التوصية:</h4>
+            <p id="resultRec" style="font-size:0.9rem; color:#f1f5f9;"></p>
+        </div>
+    </div>
 </div>
 
 <footer>
-تصميم أحمد الفزاري © 2026
+    © 2026 CyberShield AI Security Engine
 </footer>
 
-<!-- About Modal -->
-<div class="modal" id="aboutModal">
-<div class="modal-content">
-
-<h2>عن التطبيق</h2>
-
-<p>
-CyberScan AI هو نظام تحليل أمني ذكي يعتمد على الذكاء الاصطناعي لتحليل الروابط والمحتوى الرقمي واكتشاف المخاطر السيبرانية.
-</p>
-
-<p>
-يساعد التطبيق المستخدمين على اكتشاف المواقع المشبوهة ومحاولات الاحتيال والمحتوى الضار قبل التفاعل معه.
-</p>
-
-<p>
-ما يميز التطبيق عن الأنظمة التقليدية:
-</p>
-
-<ul>
-<li>تحليل ذكي متعدد الوسائط</li>
-<li>تقييم خطورة رقمي للمحتوى</li>
-<li>إمكانية تقدير المحتوى المولد بالذكاء الاصطناعي</li>
-<li>واجهة استخدام سهلة وسريعة</li>
-<li>يعمل مباشرة من المتصفح بدون تثبيت</li>
-</ul>
-
-<p>
-يهدف المشروع إلى تعزيز الوعي بالأمن السيبراني وتوفير أداة حماية ذكية للطلاب والمستخدمين.
-</p>
-
-<button class="close-btn" onclick="closeAbout()">إغلاق</button>
-
-</div>
+<!-- Settings Modal -->
+<div class="modal" id="settingsModal">
+    <div class="modal-content">
+        <h3>🔑 إعدادات المفتاح (API Key)</h3>
+        <p>لضمان الخصوصية، استخدم مفتاح Gemini API الخاص بك.</p>
+        <input type="text" id="apiKeyInput" placeholder="أدخل مفتاح API هنا">
+        <div style="display:flex; gap:10px;">
+            <button class="main-btn" style="margin-top:0" onclick="saveKey()">حفظ</button>
+            <button class="main-btn" style="margin-top:0; background:#ef4444" onclick="closeSettings()">إغلاق</button>
+        </div>
+        <p style="font-size:0.8rem; margin-top:10px; color:#64748b"><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#3b82f6">اضغط هنا للحصول على مفتاح مجاني</a></p>
+    </div>
 </div>
 
-<!-- Guide Modal -->
-<div class="modal" id="guideModal">
-<div class="modal-content">
-
-<h2>دليل الاستخدام</h2>
-
-<p><strong>طريقة استخدام التطبيق:</strong></p>
-
-<ol>
-<li>الصق الرابط أو النص أو رابط الصورة أو الفيديو في مربع الإدخال.</li>
-<li>اضغط على زر "بدء التحليل الأمني".</li>
-<li>انتظر ظهور نتيجة التحليل.</li>
-<li>اقرأ التقرير التفصيلي لفهم مستوى الخطورة.</li>
-</ol>
-
-<p><strong>نصائح:</strong></p>
-
-<ul>
-<li>يفضل إدخال روابط كاملة تبدأ بـ https</li>
-<li>لا تشارك بيانات حساسة في التحليل</li>
-<li>استخدم النتائج كمؤشر أمني وليس كحكم نهائي</li>
-</ul>
-
-<button class="close-btn" onclick="closeGuide()">إغلاق</button>
-
-</div>
-</div>
+<style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
 
 <script src="app.js"></script>
-
-<script>
-function openAbout(){
-document.getElementById("aboutModal").style.display="flex";
-}
-
-function closeAbout(){
-document.getElementById("aboutModal").style.display="none";
-}
-
-function openGuide(){
-document.getElementById("guideModal").style.display="flex";
-}
-
-function closeGuide(){
-document.getElementById("guideModal").style.display="none";
-}
-</script>
-
 </body>
 </html>
