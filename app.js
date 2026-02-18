@@ -1,90 +1,82 @@
-const SERVER_URL = "https://cyber-scan.onrender.com"; // تأكد من أن الرابط صحيح
+const SERVER_URL = "https://cyber-scan.onrender.com"; // تأكد من الرابط
 
-let currentMode = 'text'; 
-let currentImageBase64 = null;
-let html5QrCode;
+let currentMode = 'text';
+let imgBase64 = null;
+let qrScanner = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    // التحقق من المشاركة الخارجية
+// التحقق من المفتاح عند البدء
+document.addEventListener("DOMContentLoaded", () => {
+    if (!localStorage.getItem("apiKey")) {
+        setTimeout(() => openModal('settingsModal'), 1000);
+    }
+    // دعم المشاركة من التطبيقات الأخرى
     const params = new URLSearchParams(window.location.search);
-    const sharedText = params.get('text') || params.get('url');
-    if (sharedText) {
-        document.getElementById('textInput').value = sharedText;
-    }
-    // التحقق من المفتاح
-    if(!localStorage.getItem("apiKey")){
-        setTimeout(openSettings, 1000);
-    }
+    if (params.has('text')) document.getElementById('textInput').value = params.get('text');
 });
 
-function switchTab(mode) {
+// إدارة التبويبات (Tabs)
+function setMode(mode, btn) {
     currentMode = mode;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.input-group').forEach(g => g.classList.remove('active'));
-    
-    event.target.classList.add('active');
-    document.getElementById(`tab-${mode}`).classList.add('active');
-    
-    if(mode !== 'qr' && html5QrCode) html5QrCode.stop().catch(()=>{});
+    btn.classList.add('active');
+
+    document.getElementById('text-view').style.display = mode === 'text' ? 'block' : 'none';
+    document.getElementById('image-view').style.display = mode === 'image' ? 'block' : 'none';
+    document.getElementById('qr-view').style.display = mode === 'qr' ? 'block' : 'none';
+
+    if (mode !== 'qr' && qrScanner) qrScanner.stop().catch(()=>{});
 }
 
-function previewImage(input) {
+// معالجة الصور
+function handleImage(input) {
     const file = input.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('imagePreview').src = e.target.result;
-            document.getElementById('imagePreview').style.display = 'block';
-            currentImageBase64 = e.target.result;
-        }
+        reader.onload = (e) => {
+            imgBase64 = e.target.result;
+            document.getElementById('imgPreview').src = imgBase64;
+            document.getElementById('imgPreview').style.display = 'block';
+        };
         reader.readAsDataURL(file);
     }
 }
 
-function startQR() {
-    html5QrCode = new Html5Qrcode("qr-reader");
-    html5QrCode.start(
-        { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+// معالجة QR
+function initQR() {
+    qrScanner = new Html5Qrcode("qr-reader");
+    qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
         (decodedText) => {
-            document.getElementById("qr-result").innerText = decodedText;
-            document.getElementById("textInput").value = decodedText;
-            currentMode = 'text';
-            html5QrCode.stop();
-            if (navigator.vibrate) navigator.vibrate(200);
+            document.getElementById('qr-result').innerText = "تم الرصد: " + decodedText;
+            document.getElementById('textInput').value = decodedText; // وضع الرابط في خانة النص
+            currentMode = 'text'; // تحويل للوضع النصي للإرسال
+            qrScanner.stop();
+            analyze(); // بدء التحليل تلقائياً
         },
         () => {}
-    ).catch(() => alert("لا يمكن الوصول للكاميرا"));
+    );
 }
 
-// زر فحص جديد
-function resetApp() {
-    document.getElementById('resultCard').style.display = 'none';
-    document.getElementById('inputSection').style.display = 'block';
-    document.getElementById('textInput').value = '';
-    document.getElementById('imagePreview').style.display = 'none';
-    document.getElementById('fileInput').value = '';
-    currentImageBase64 = null;
-    window.scrollTo(0, 0);
-}
-
-async function processAnalysis() {
+// دالة التحليل الرئيسية
+async function analyze() {
     const apiKey = localStorage.getItem("apiKey");
-    if (!apiKey) return openSettings();
+    if (!apiKey) return openModal('settingsModal');
 
-    let payload = {};
-    if (currentMode === 'text' || currentMode === 'qr') {
-        const text = document.getElementById('textInput').value;
-        if (!text) return alert("الرجاء إدخال بيانات للفحص");
-        payload = { input: text, type: 'text', apiKey };
+    let payload = { apiKey };
+    
+    if (currentMode === 'image') {
+        if (!imgBase64) return alert("اختر صورة أولاً");
+        payload.input = imgBase64;
+        payload.type = 'image';
     } else {
-        if (!currentImageBase64) return alert("الرجاء اختيار صورة");
-        payload = { input: currentImageBase64, type: 'image', apiKey };
+        const text = document.getElementById('textInput').value;
+        if (!text) return alert("أدخل نصاً أو رابطاً");
+        payload.input = text;
+        payload.type = 'text';
     }
 
-    // إخفاء المدخلات وإظهار التحميل
-    document.getElementById('inputSection').style.display = 'none';
+    // UI Loading
     document.getElementById('loader').style.display = 'block';
+    document.getElementById('analyzeBtn').disabled = true;
 
     try {
         const res = await fetch(`${SERVER_URL}/analyze`, {
@@ -94,58 +86,51 @@ async function processAnalysis() {
         });
 
         const data = await res.json();
-        renderResult(data);
+        showResults(data);
 
-    } catch (error) {
-        alert("خطأ في الاتصال بالخادم");
-        resetApp(); // العودة للبداية عند الخطأ
+    } catch (e) {
+        alert("فشل الاتصال بالخادم، حاول مجدداً");
+        console.error(e);
     } finally {
         document.getElementById('loader').style.display = 'none';
+        document.getElementById('analyzeBtn').disabled = false;
     }
 }
 
-function renderResult(data) {
-    const card = document.getElementById('resultCard');
-    const scoreCircle = document.getElementById('scoreCircle');
-    const badge = document.getElementById('badgeStatus');
+// عرض النتائج
+function showResults(data) {
+    document.getElementById('mainSection').style.display = 'none';
+    document.getElementById('resultSection').style.display = 'block';
 
-    card.style.display = 'block';
-    
-    // التعامل مع البيانات المفقودة لتجنب undefined
     const score = data.risk_score || 0;
-    const status = data.status || "unknown";
-    const summary = data.summary || "لا يوجد ملخص متاح";
-    const details = data.technical_details || "لا توجد تفاصيل تقنية";
-    const rec = data.recommendation || "توخ الحذر دائماً";
+    const color = score < 30 ? '#10b981' : score < 70 ? '#f59e0b' : '#ef4444'; // أخضر - برتقالي - أحمر
 
-    let color = '#10b981'; // Safe
-    if (status === 'suspicious') color = '#f59e0b';
-    if (status === 'dangerous') color = '#ef4444';
-
-    const degree = (score / 100) * 360;
-    scoreCircle.style.background = `conic-gradient(${color} ${degree}deg, #334155 0deg)`;
-    document.getElementById('scoreValue').innerText = score;
-    document.getElementById('scoreValue').style.color = color;
-
-    badge.innerText = data.type_detected || "تحليل عام";
-    badge.style.background = color;
+    document.getElementById('riskScore').innerText = score + "/100";
+    document.getElementById('riskScore').style.color = color;
     
-    document.getElementById('resultTitle').innerText = 
-        status === 'safe' ? "المحتوى آمن" : 
-        status === 'dangerous' ? "خطر مرتفع!" : "محتوى مشبوه";
+    document.getElementById('resStatus').innerText = data.status === 'safe' ? "✅ المحتوى آمن" : "⚠️ تحذير أمني";
+    document.getElementById('resStatus').style.color = color;
 
-    document.getElementById('resultSummary').innerText = summary;
-    document.getElementById('resultDetails').innerText = details;
-    document.getElementById('resultRec').innerText = rec;
+    document.getElementById('resSummary').innerText = data.summary || "لا يوجد ملخص";
+    document.getElementById('resDetails').innerText = data.technical_details || "لا توجد تفاصيل";
+    
+    // عرض المصدر والنوع (الميزة الجديدة)
+    document.getElementById('resSource').innerText = "المصدر: " + (data.source || "غير محدد");
+    document.getElementById('resType').innerText = "النوع: " + (data.content_type || "عام");
 }
 
-function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
-function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+function resetApp() {
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('mainSection').style.display = 'block';
+    document.getElementById('textInput').value = '';
+    document.getElementById('imgPreview').style.display = 'none';
+    imgBase64 = null;
+}
+
+// Modals Management
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function saveKey() {
-    const key = document.getElementById('apiKeyInput').value;
-    if(key) {
-        localStorage.setItem("apiKey", key);
-        closeSettings();
-        alert("تم حفظ المفتاح ✅");
-    }
+    const key = document.getElementById('apiKey').value;
+    if (key) { localStorage.setItem("apiKey", key); closeModal('settingsModal'); alert("تم الحفظ"); }
 }
