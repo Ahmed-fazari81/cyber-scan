@@ -6,47 +6,39 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-app.get("/", (req, res) => {
-  res.send("CyberShield Core Engine Active 🛡️");
-});
+app.get("/", (req, res) => res.send("CyberShield Engine Ready 2026 🛡️"));
 
 app.post("/analyze", async (req, res) => {
   try {
     const { input, type, apiKey } = req.body;
 
-    if (!input || !apiKey)
-      return res.status(400).json({ error: "بيانات ناقصة" });
+    if (!input || !apiKey) return res.status(400).json({ error: "Missing Data" });
 
-    // هندسة الأوامر بدقة عالية
+    // هندسة أوامر دقيقة جداً لإجبار النموذج على استخراج المصدر
     const systemPrompt = `
-    أنت خبير أمن سيبراني (Cyber Security Expert) ومحقق جنائي رقمي.
-    مهمتك تحليل المدخلات بدقة.
-    
-    التعليمات:
-    1. قم بتحليل الرابط أو النص أو الصورة.
-    2. إذا كان الرابط يبدأ بـ http وليس https، اعتبره "suspicious" (مشبوه) لأنه غير مشفر، واشرح ذلك.
-    3. أكتب النتيجة باللغة العربية فقط.
-    4. يجب أن يكون الرد بصيغة JSON حصراً (بدون markdown).
+    أنت خبير أمن سيبراني ومحقق جنائي رقمي (Digital Forensics).
+    حلل المدخلات بدقة متناهية باللغة العربية.
 
-    الهيكل المطلوب للرد (JSON):
-    {
-      "status": "safe" أو "suspicious" أو "dangerous",
-      "risk_score": رقم من 0 إلى 100,
-      "type_detected": "Phishing" أو "Malware" أو "Encryption Issue" أو "Safe",
-      "summary": "ملخص عربي واضح للنتيجة",
-      "technical_details": "شرح تقني (مثلا: الشهادة منتهية، البروتوكول غير آمن، الكود سليم...)",
-      "recommendation": "خطوات عملية للمستخدم"
-    }
+    المطلوب: استخراج تقرير بصيغة JSON *فقط* يحتوي على الحقول التالية بدقة:
+    1. "status": (safe, suspicious, dangerous).
+    2. "risk_score": (0-100).
+    3. "source": اسم الموقع أو المصدر (مثلاً: Wikipedia, Facebook, WhatsApp, Unknown).
+    4. "content_type": نوع المحتوى (مثلاً: صورة، مقال، رابط تشعبي، ملف).
+    5. "summary": ملخص دقيق يذكر المصدر (مثلاً: "هذا رابط لصورة من موقع ويكيبيديا وهي تبدو آمنة").
+    6. "technical_details": لماذا اتخذت هذا القرار؟
+    7. "recommendation": نصيحة للمستخدم.
+
+    ملاحظة هامة: إذا كان الرابط يبدأ بـ http (بدون s) اعتبره suspicious.
     `;
 
     let requestBody;
-
+    
     if (type === "image") {
         const base64Data = input.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
         requestBody = {
             contents: [{
                 parts: [
-                    { text: systemPrompt + "\n حلل هذه الصورة:" },
+                    { text: systemPrompt + "\n حلل هذه الصورة ومصدرها المحتمل:" },
                     { inline_data: { mime_type: "image/jpeg", data: base64Data } }
                 ]
             }]
@@ -54,7 +46,7 @@ app.post("/analyze", async (req, res) => {
     } else {
         requestBody = {
             contents: [{
-                parts: [{ text: `${systemPrompt}\n\nالمدخل المراد فحصه: ${input}` }]
+                parts: [{ text: `${systemPrompt}\n\nالمدخل للتحليل: ${input}` }]
             }]
         };
     }
@@ -69,41 +61,35 @@ app.post("/analyze", async (req, res) => {
     );
 
     const data = await response.json();
-    
-    // استخراج النص الخام
     let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    // --- (التصحيح الجوهري) دالة استخراج JSON بدقة ---
-    // نبحث عن أول قوس { وآخر قوس } ونتجاهل كل شيء قبلهما أو بعدهما
-    const firstBrace = rawText.indexOf('{');
-    const lastBrace = rawText.lastIndexOf('}');
-    
-    if (firstBrace !== -1 && lastBrace !== -1) {
-        rawText = rawText.substring(firstBrace, lastBrace + 1);
-    }
-    // ------------------------------------------------
-
-    try {
-        const jsonResult = JSON.parse(rawText);
-        res.json(jsonResult);
-    } catch (e) {
-        console.error("JSON Parse Error:", rawText);
-        // في حال فشل التحليل، نعيد رسالة خطأ منظمة بدلاً من الانهيار
-        res.json({
-            status: "suspicious",
-            risk_score: 50,
-            type_detected: "Analysis Error",
-            summary: "لم نتمكن من قراءة البيانات بشكل دقيق، لكن كن حذراً.",
-            technical_details: "فشل النظام في معالجة رد الذكاء الاصطناعي: " + rawText.substring(0, 50) + "...",
-            recommendation: "حاول مرة أخرى أو تأكد من الرابط."
-        });
+    // تنظيف الرد لاستخراج JSON فقط (إزالة أي نصوص إضافية)
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        try {
+            const jsonResult = JSON.parse(jsonMatch[0]);
+            res.json(jsonResult);
+        } catch (e) {
+            throw new Error("JSON Parsing Failed");
+        }
+    } else {
+        throw new Error("No JSON found");
     }
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "فشل داخلي في الخادم" });
+    console.error("Analysis Error:", err);
+    // رد احتياطي في حالة الخطأ لكي لا يظهر undefined
+    res.json({
+        status: "suspicious",
+        risk_score: 50,
+        source: "غير معروف",
+        content_type: "تحليل عام",
+        summary: "لم نتمكن من تحديد المصدر بدقة، يرجى التحقق يدوياً.",
+        technical_details: "حدث خطأ أثناء معالجة رد الذكاء الاصطناعي.",
+        recommendation: "توخ الحذر ولا تفتح الرابط إذا لم تكن متأكداً."
+    });
   }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Server Running on Port " + PORT));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
