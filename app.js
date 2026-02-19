@@ -4,32 +4,76 @@ let currentMode = "text";
 let imgBase64 = null;
 let lastResult = null;
 
+// تحليل المحتوى
 async function analyze() {
   let payload = {};
 
   if (currentMode === "image") {
+    if (!imgBase64) return alert("اختر صورة أولاً");
     payload.input = imgBase64;
     payload.type = "image";
   } else {
-    payload.input = document.getElementById("textInput").value;
+    const text = document.getElementById("textInput").value;
+    if (!text) return alert("أدخل نصاً أو رابطاً");
+    payload.input = text;
     payload.type = "text";
   }
 
   document.getElementById("loader").style.display = "block";
 
-  const res = await fetch(`${SERVER_URL}/analyze`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  try {
+    const res = await fetch(`${SERVER_URL}/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  const data = await res.json();
-  lastResult = data;
-  showResults(data);
+    const data = await res.json();
+    lastResult = data;
+    showResults(data);
+
+  } catch (e) {
+    alert("فشل الاتصال بالخادم");
+    console.error(e);
+  }
 
   document.getElementById("loader").style.display = "none";
 }
 
+// عرض النتائج
+function showResults(data) {
+  document.getElementById("mainSection").style.display = "none";
+  document.getElementById("resultSection").style.display = "block";
+
+  const score = data.risk_score || 0;
+  const color = score < 30 ? "#10b981" : score < 70 ? "#f59e0b" : "#ef4444";
+
+  document.getElementById("riskScore").innerText = score + "/100";
+  document.getElementById("riskScore").style.color = color;
+
+  document.getElementById("resStatus").innerText =
+    data.status === "safe" ? "✅ المحتوى آمن" : "⚠️ تحذير أمني";
+
+  document.getElementById("resStatus").style.color = color;
+  document.getElementById("resSummary").innerText = data.summary || "";
+  document.getElementById("resDetails").innerText =
+    data.technical_details || "";
+
+  document.getElementById("resSource").innerText =
+    "المصدر: " + (data.source || "غير محدد");
+
+  document.getElementById("resType").innerText =
+    "النوع: " + (data.content_type || "عام");
+}
+
+// إعادة التطبيق
+function resetApp() {
+  document.getElementById("resultSection").style.display = "none";
+  document.getElementById("mainSection").style.display = "block";
+  document.getElementById("textInput").value = "";
+}
+
+// تحميل التقرير
 async function downloadReport() {
   if (!lastResult) return;
 
@@ -48,4 +92,16 @@ async function downloadReport() {
   a.href = url;
   a.download = "cyber-report.txt";
   a.click();
+}
+
+// معالجة الصورة
+function handleImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    imgBase64 = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
