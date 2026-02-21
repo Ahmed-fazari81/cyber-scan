@@ -1,94 +1,124 @@
 import fetch from "node-fetch";
 
-const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+/* تحليل Gemini */
+async function callGemini(apiKey, body) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }
+  );
 
-export async function analyzeContent({
-  apiKey,
-  input,
-  type = "text",
-  mimeType = "image/jpeg"
-}) {
-  const systemPrompt = `
-أنت محرك تحليل أمني سيبراني احترافي.
-أعد النتيجة بصيغة JSON فقط.
-
-{
-  "status": "safe" | "suspicious" | "dangerous",
-  "risk_score": رقم من 0 إلى 100,
-  "source": "اسم المصدر",
-  "content_type": "Phishing | Deepfake | Scam | Safe",
-  "summary": "وصف عربي واضح",
-  "technical_details": "سبب تقني",
-  "recommendation": "إجراء أمني"
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
-`;
+
+/* تقييم سمعة الرابط */
+function evaluateSource(text) {
+  if (!text) return { score: 40, label: "unknown" };
+
+  const trusted = [
+    "wikipedia.org",
+    "gov",
+    "edu",
+    "who.int"
+  ];
+
+  const suspicious = [
+    "bit.ly",
+    "tinyurl",
+    "free-download",
+    "crack",
+    "hack"
+  ];
+
+  if (trusted.some(d => text.includes(d)))
+    return { score: 5, label: "trusted" };
+
+  if (suspicious.some(d => text.includes(d)))
+    return { score: 85, label: "suspicious" };
+
+  return { score: 35, label: "normal" };
+}
+
+/* تحليل الرد */
+function analyzeResponse(text) {
+  const dangerWords = [
+    "malware",
+    "phishing",
+    "fake",
+    "scam",
+    "virus",
+    "fraud"
+  ];
+
+  const hits = dangerWords.filter(w =>
+    text.toLowerCase().includes(w)
+  );
+
+  if (hits.length >= 2)
+    return { score: 80, status: "danger" };
+
+  if (hits.length === 1)
+    return { score: 50, status: "warning" };
+
+  return { score: 10, status: "safe" };
+}
+
+/* الدالة الرئيسية */
+export async function analyzeWithGemini({
+  apiKey,
+  text,
+  fileBase64,
+  mimeType,
+  lang = "ar"
+}) {
+
+  const role = "أنت خبير أمن سيبراني. صف المخاطر إن وجدت فقط.";
 
   let body;
 
-  if (type === "image") {
-    const base64Data = input.replace(
-      /^data:image\/(png|jpeg|jpg|webp);base64,/,
-      ""
-    );
-
+  if (fileBase64) {
     body = {
       contents: [{
         parts: [
-          { text: systemPrompt + "\nحلل هذه الصورة أمنياً:" },
-          { inline_data: { mime_type: mimeType, data: base64Data } }
+          { text: role + " هل هذه الوسائط ضارة رقمياً؟" },
+          { inline_data: { mime_type: mimeType, data: fileBase64 } }
         ]
       }]
     };
   } else {
     body = {
       contents: [{
-        parts: [{ text: systemPrompt + `\nالمدخل: "${input}"` }]
+        parts: [{
+          text: role + " حلل الرابط التالي أمنياً: " + text
+        }]
       }]
     };
   }
 
-  try {
-    const response = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
+  const aiText = await callGemini(apiKey, body);
 
-    const data = await response.json();
+  const sourceEval = evaluateSource(text);
+  const aiEval = analyzeResponse(aiText);
 
-    let rawText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const finalScore = Math.min(
+    100,
+    Math.round((sourceEval.score + aiEval.score) / 2)
+  );
 
-    rawText = rawText.replace(/```json/g, "").replace(/```/g, "");
-
-    const start = rawText.indexOf("{");
-    const end = rawText.lastIndexOf("}");
-
-    if (start !== -1 && end !== -1) {
-      rawText = rawText.substring(start, end + 1);
-    }
-
-    return JSON.parse(rawText);
-
-  } catch (error) {
-    return fallbackAnalysis(input);
-  }
-}
-
-function fallbackAnalysis(input) {
-  let status = "suspicious";
-  if (input.includes("http:")) status = "suspicious";
-  if (input.includes("login") || input.includes("bank"))
-    status = "dangerous";
+  let status = "safe";
+  if (finalScore >= 70) status = "danger";
+  else if (finalScore >= 40) status = "warning";
 
   return {
+    risk_score: finalScore,
     status,
-    risk_score: status === "dangerous" ? 85 : 55,
-    source: "Fallback Engine",
-    content_type: "Unknown",
-    summary: "تم اكتشاف مؤشرات خطر محتملة.",
-    technical_details: "تحليل احتياطي.",
-    recommendation: "تجنب التفاعل مع المحتوى."
+    summary: aiText || "لم يتم اكتشاف تهديدات واضحة",
+    technical_details: aiText,
+    source: sourceEval.label,
+    content_type: fileBase64 ? "image" : "link"
   };
 }
