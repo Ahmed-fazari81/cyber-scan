@@ -13,193 +13,159 @@
 
 <style>
 :root {
-  --primary: #3b82f6;
-  --dark-bg: #0f172a;
-  --card-bg: #1e293b;
-  --text: #f1f5f9;
+  --primary:#3b82f6;
+  --bg:#0f172a;
+  --card:#1e293b;
+  --border:#334155;
+  --text:#f1f5f9;
 }
 
-body {
-  font-family: 'Tajawal', sans-serif;
-  background: var(--dark-bg);
-  color: var(--text);
-  margin: 0;
+body{
+  font-family:'Tajawal',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  margin:0;
 }
 
-header {
-  background: rgba(30,41,59,0.95);
-  padding: 15px 20px;
-  border-bottom: 1px solid #334155;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+header{
+  padding:18px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+  font-weight:800;
+  color:var(--primary);
 }
 
-.logo {
-  font-weight: 800;
-  color: var(--primary);
+.container{
+  max-width:600px;
+  margin:auto;
+  padding:20px;
 }
 
-.container {
-  max-width: 600px;
-  margin: auto;
-  padding: 20px;
+.tabs{
+  display:flex;
+  gap:8px;
+  margin:20px 0;
+  background:#020617;
+  padding:5px;
+  border-radius:12px;
 }
 
-.nav-buttons {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
+.tab{
+  flex:1;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:none;
+  color:#64748b;
+  font-weight:bold;
+  cursor:pointer;
 }
 
-.info-btn {
-  flex: 1;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #334155;
-  background: #1e293b;
-  color: #94a3b8;
-  cursor: pointer;
+.tab.active{
+  background:var(--card);
+  color:white;
 }
 
-.tabs {
-  display: flex;
-  gap: 8px;
-  margin: 20px 0;
-  background: #020617;
-  padding: 5px;
-  border-radius: 12px;
+.input-area{
+  background:var(--card);
+  padding:20px;
+  border-radius:16px;
+  border:1px solid var(--border);
 }
 
-.tab {
-  flex: 1;
-  padding: 10px;
-  background: none;
-  border: none;
-  color: #64748b;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.tab.active {
-  background: var(--card-bg);
-  color: white;
-}
-
-.input-area {
-  background: var(--card-bg);
-  padding: 20px;
-  border-radius: 16px;
-  border: 1px solid #334155;
-}
-
-textarea {
-  width: 100%;
-  height: 100px;
-  background: #0f172a;
-  border: 1px solid #334155;
-  color: white;
-  border-radius: 10px;
-  padding: 10px;
-}
-
-.action-btn {
-  width: 100%;
-  padding: 15px;
-  background: var(--primary);
-  border: none;
-  border-radius: 10px;
-  color: white;
-  font-weight: bold;
-  margin-top: 15px;
-  cursor: pointer;
-}
-
-.result-card {
-  background: var(--card-bg);
-  border-radius: 16px;
-  padding: 25px;
-  margin-top: 25px;
-  display: none;
-  border: 1px solid #334155;
-}
-
-.modal {
-  position: fixed;
-  top:0;
-  left:0;
+textarea{
   width:100%;
-  height:100%;
-  background: rgba(0,0,0,0.85);
-  display: none;
-  align-items: center;
-  justify-content: center;
+  height:100px;
+  border-radius:10px;
+  background:#0f172a;
+  border:1px solid var(--border);
+  color:white;
+  padding:10px;
 }
 
-.modal-content {
-  background: var(--card-bg);
-  padding: 25px;
-  border-radius: 16px;
-  max-width: 500px;
-  width: 100%;
+.action-btn{
+  width:100%;
+  padding:15px;
+  margin-top:15px;
+  border:none;
+  border-radius:10px;
+  background:var(--primary);
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
 }
 
-.close-modal {
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  width: 100%;
-  margin-top: 15px;
-  cursor: pointer;
+.result-card{
+  background:var(--card);
+  border-radius:16px;
+  padding:25px;
+  margin-top:25px;
+  border:1px solid var(--border);
+  display:none;
 }
+
+.progress-wrap{
+  display:none;
+  margin-top:15px;
+}
+
+.progress-bar{
+  height:10px;
+  width:0%;
+  background:var(--primary);
+  transition:width .4s;
+}
+
+.note{
+  font-size:.85rem;
+  color:#94a3b8;
+  margin-top:10px;
+}
+
+.history{
+  margin-top:20px;
+  font-size:.9rem;
+  color:#94a3b8;
+}
+
 </style>
 </head>
 
 <body>
 
-<header>
-  <div class="logo">🛡️ CyberShield</div>
-</header>
+<header>🛡️ CyberShield</header>
 
 <div class="container">
-
-<div class="nav-buttons">
-<button class="info-btn" onclick="openModal('aboutModal')">عن التطبيق</button>
-<button class="info-btn" onclick="openModal('guideModal')">دليل الاستخدام</button>
-</div>
 
 <div id="mainSection">
 
 <div class="tabs">
-<button class="tab active" onclick="setMode('text', this)">رابط / نص</button>
-<button class="tab" onclick="setMode('image', this)">صورة</button>
-<button class="tab" onclick="setMode('qr', this)">QR</button>
+<button class="tab active" onclick="setMode('text',this)">رابط / نص</button>
+<button class="tab" onclick="setMode('image',this)">صورة</button>
 </div>
 
 <div class="input-area">
 
 <div id="text-view">
-<textarea id="textInput" placeholder="الصق الرابط هنا"></textarea>
+<textarea id="textInput" placeholder="الصق الرابط أو النص"></textarea>
 </div>
 
-<div id="image-view" style="display:none; text-align:center;">
+<div id="image-view" style="display:none">
 <input type="file" accept="image/*" onchange="handleImage(this)">
-<img id="imgPreview" style="max-width:100%; display:none; margin-top:10px;">
-</div>
-
-<div id="qr-view" style="display:none">
-<div id="qr-reader"></div>
+<img id="imgPreview" style="max-width:100%;display:none;margin-top:10px">
 </div>
 
 <button id="analyzeBtn" class="action-btn" onclick="analyze()">
 بدء الفحص الأمني
 </button>
 
-<div id="loader" style="display:none; text-align:center; margin-top:10px">
+<div class="progress-wrap" id="progressWrap">
+<div style="background:#020617;border-radius:10px;overflow:hidden">
+<div id="progressBar" class="progress-bar"></div>
+</div>
+<div style="text-align:center;margin-top:5px;color:#94a3b8">
 جارٍ التحليل الذكي...
+</div>
 </div>
 
 </div>
@@ -207,10 +173,7 @@ textarea {
 
 <div id="resultSection" class="result-card">
 
-<div style="text-align:center">
-<div id="riskScore" style="font-size:2rem"></div>
-</div>
-
+<div style="text-align:center;font-size:2rem" id="riskScore"></div>
 <h3 id="resStatus"></h3>
 <p id="resSummary"></p>
 
@@ -219,48 +182,30 @@ textarea {
 <p id="resDetails"></p>
 </div>
 
-<div id="resSource"></div>
-<div id="resType"></div>
+<div>
+<strong>سبب القرار الأمني:</strong>
+<p id="decisionReason"></p>
+</div>
 
-<button class="action-btn" onclick="downloadReport()">
-📄 تحميل التقرير الأمني
-</button>
+<div class="note">
+⚠️ التقييم يعتمد على تحليل احتمالي بالذكاء الاصطناعي وقد لا يكون قطعياً.
+</div>
 
-<button class="action-btn" style="background:#475569" onclick="resetApp()">
-فحص جديد
-</button>
+<div style="margin-top:10px">
+<strong>نسبة الثقة:</strong>
+<span id="confidence"></span>
+</div>
+
+<button class="action-btn" onclick="downloadReport()">تحميل التقرير الأمني</button>
+<button class="action-btn" onclick="shareWhatsApp()">مشاركة النتيجة</button>
+<button class="action-btn" style="background:#475569" onclick="resetApp()">فحص جديد</button>
+
+<div class="history" id="historyBox"></div>
 
 </div>
 
-</div>
-
-<!-- عن التطبيق -->
-<div id="aboutModal" class="modal">
-<div class="modal-content">
-<h2>عن التطبيق</h2>
-<p>
-منصة تحليل أمني تعتمد على الذكاء الاصطناعي
-لاكتشاف الاحتيال والتزييف الرقمي والروابط الضارة.
-</p>
-<button class="close-modal" onclick="closeModal('aboutModal')">إغلاق</button>
-</div>
-</div>
-
-<!-- دليل الاستخدام -->
-<div id="guideModal" class="modal">
-<div class="modal-content">
-<h2>دليل الاستخدام</h2>
-<ul>
-<li>ألصق الرابط أو النص</li>
-<li>أو ارفع صورة</li>
-<li>أو امسح QR</li>
-<li>اضغط فحص</li>
-</ul>
-<button class="close-modal" onclick="closeModal('guideModal')">إغلاق</button>
-</div>
 </div>
 
 <script src="app.js"></script>
-
 </body>
 </html>
