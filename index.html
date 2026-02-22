@@ -32,7 +32,7 @@ header{
   text-align:center;
   font-weight:800;
   color:var(--primary);
-  font-size: 1.2rem;
+  font-size: 1.5rem;
 }
 
 .container{
@@ -41,10 +41,34 @@ header{
   padding:20px;
 }
 
+/* أزرار المعلومات الجديدة */
+.info-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.info-btn {
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-family: inherit;
+  transition: 0.3s;
+  font-size: 0.9rem;
+}
+.info-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
 .tabs{
   display:flex;
   gap:8px;
-  margin:20px 0;
+  margin:10px 0 20px 0;
   background:#020617;
   padding:5px;
   border-radius:12px;
@@ -101,6 +125,8 @@ input[type="file"] {
   font-weight:bold;
   cursor:pointer;
   transition: 0.3s;
+  font-family: inherit;
+  font-size: 1rem;
 }
 .action-btn:hover { background: #2563eb; }
 
@@ -140,6 +166,44 @@ input[type="file"] {
   color:#94a3b8;
   line-height: 1.6;
 }
+
+/* تصميم النوافذ المنبثقة (Modals) */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+.modal-content {
+  background: var(--card);
+  padding: 25px;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 85%;
+  border: 1px solid var(--border);
+  position: relative;
+  line-height: 1.7;
+}
+.close-btn {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+.modal-title {
+  color: var(--primary);
+  margin-top: 0;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
 </style>
 </head>
 
@@ -148,6 +212,12 @@ input[type="file"] {
 <header>🛡️ الدرع السيبراني | CyberShield</header>
 
 <div class="container">
+
+  <!-- أزرار المعلومات -->
+  <div class="info-buttons">
+    <button class="info-btn" onclick="openModal('aboutModal')">عن التطبيق ℹ️</button>
+    <button class="info-btn" onclick="openModal('guideModal')">دليل المستخدم 📖</button>
+  </div>
 
   <div id="mainSection">
     <div class="tabs">
@@ -172,7 +242,7 @@ input[type="file"] {
           <div id="progressBar" class="progress-bar"></div>
         </div>
         <div style="text-align:center; margin-top:8px; color:#94a3b8; font-size: 0.9rem;">
-          جارٍ التحليل الذكي...
+          جارٍ التحليل الذكي عبر الذكاء الاصطناعي...
         </div>
       </div>
     </div>
@@ -211,8 +281,53 @@ input[type="file"] {
 
 </div>
 
-<!-- تسجيل الـ Service Worker ليعمل التطبيق كـ PWA -->
+<!-- نافذة "عن التطبيق" -->
+<div id="aboutModal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeModal('aboutModal')">×</button>
+    <h2 class="modal-title">عن التطبيق ℹ️</h2>
+    <p><strong>الدرع السيبراني (CyberShield)</strong> هو منصة تحليل أمني استباقية تعتمد على تقنيات الذكاء الاصطناعي التوليدي (Gemini AI).</p>
+    <p>تم تطوير هذا التطبيق كحل تقني مبتكر للمشاركة في <strong>ملتقى الأمن السيبراني</strong>، ويهدف إلى حماية المستخدمين من هجمات التصيد الاحتيالي (Phishing)، والروابط الخبيثة، والوسائط المتعددة المزيفة.</p>
+    <p style="color: var(--primary); font-weight: bold;">رؤيتنا: تعزيز الوعي الأمني الرقمي وتوفير أداة حماية في متناول الجميع.</p>
+  </div>
+</div>
+
+<!-- نافذة "دليل المستخدم" -->
+<div id="guideModal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeModal('guideModal')">×</button>
+    <h2 class="modal-title">دليل الاستخدام 📖</h2>
+    <p>استخدام التطبيق بسيط جداً ويتكون من خطوات معدودة:</p>
+    <ol style="padding-right: 20px;">
+      <li><strong>اختر نوع الفحص:</strong> من خلال الأزرار العلوية، اختر ما إذا كنت تريد فحص (رابط/نص) أو (صورة).</li>
+      <li><strong>أدخل البيانات:</strong> قم بلصق الرابط المشبوه أو ارفع الصورة المراد تحليلها.</li>
+      <li><strong>بدء الفحص:</strong> اضغط على زر "بدء الفحص الأمني" وانتظر حتى يقوم الذكاء الاصطناعي بتحليل البيانات.</li>
+      <li><strong>النتائج:</strong> ستظهر لك نسبة الخطورة، ملخص أمني، وتوصية تقنية.</li>
+      <li><strong>التقرير:</strong> يمكنك تحميل تقرير أمني بصيغة نصية أو مشاركة النتيجة عبر الواتساب لتنبيه الآخرين.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- دوال التحكم في النوافذ المنبثقة وتسجيل الـ Service Worker -->
 <script>
+  // فتح النافذة المنبثقة
+  function openModal(id) {
+    document.getElementById(id).style.display = 'flex';
+  }
+  
+  // إغلاق النافذة المنبثقة
+  function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+  }
+
+  // إغلاق النافذة عند الضغط خارجها
+  window.onclick = function(event) {
+    if (event.target.classList.contains('modal-overlay')) {
+      event.target.style.display = "none";
+    }
+  }
+
+  // تسجيل PWA
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./service-worker.js');
