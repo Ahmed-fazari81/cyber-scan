@@ -15,46 +15,54 @@ async function callGemini(apiKey, body) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
-/* تقييم سمعة الرابط بشكل آمن */
+/* تقييم سمعة الرابط - تم تحديثه ليشمل المواقع العالمية */
 function evaluateSource(text) {
-  if (!text) return { score: 40, label: "unknown" };
+  if (!text) return { score: 30, label: "unknown" };
 
   try {
-    // التأكد من استخراج النطاق (Domain) فقط بدلاً من البحث في كامل النص
     const urlObj = new URL(text.startsWith('http') ? text : `https://${text}`);
     const hostname = urlObj.hostname.toLowerCase();
 
-    const trustedEnds = [".gov", ".edu", "wikipedia.org", "who.int"];
+    // القائمة البيضاء (مواقع موثوقة عالمياً)
+    const trustedEnds = [
+      ".gov", ".edu", "wikipedia.org", "who.int",
+      "google.com", "drive.google.com", "docs.google.com", 
+      "microsoft.com", "github.com", "apple.com", "youtube.com"
+    ];
+    
+    // القائمة السوداء (مواقع مشبوهة غالباً)
     const suspicious = ["bit.ly", "tinyurl", "cutt.ly", "free-download", "crack", "hack"];
 
+    // إذا كان الرابط من القائمة البيضاء، نعطيه نسبة خطر 0
     if (trustedEnds.some(domain => hostname.endsWith(domain)))
-      return { score: 5, label: "trusted" };
+      return { score: 0, label: "trusted" };
 
+    // إذا كان من القائمة السوداء، نسبة الخطر 85
     if (suspicious.some(domain => hostname.includes(domain)))
       return { score: 85, label: "suspicious" };
 
   } catch (e) {
-    // إذا لم يكن الرابط صالحاً
-    return { score: 35, label: "normal" };
+    return { score: 20, label: "normal" };
   }
 
-  return { score: 35, label: "normal" };
+  // الروابط العادية (لا موثوقة جداً ولا خطيرة)
+  return { score: 20, label: "normal" };
 }
 
 /* تحليل الرد - متوافق مع اللغة العربية */
 function analyzeResponse(text) {
   const dangerWords = [
     "malware", "phishing", "fake", "scam", "virus", "fraud",
-    "ضار", "احتيال", "فيروس", "تصيد", "خبيث", "وهمي", "خطير", "اختراق", "مشبوه"
+    "ضار", "احتيال", "فيروس", "تصيد", "خبيث", "وهمي", "خطير", "اختراق", "مشبوه", "برمجيات خبيثة"
   ];
 
-  const hits = dangerWords.filter(w =>
-    text.toLowerCase().includes(w)
-  );
+  const hits = dangerWords.filter(w => text.toLowerCase().includes(w));
 
   if (hits.length >= 2) return { score: 80, status: "danger" };
-  if (hits.length === 1) return { score: 50, status: "warning" };
-  return { score: 10, status: "safe" };
+  if (hits.length === 1) return { score: 40, status: "warning" };
+  
+  // إذا لم يجد تهديد، نسبة الخطر من الذكاء الاصطناعي 0
+  return { score: 0, status: "safe" };
 }
 
 /* الدالة الرئيسية المصدرة للخادم */
@@ -66,7 +74,7 @@ export async function analyzeWithGemini({ apiKey, text, fileBase64, mimeType, la
     body = {
       contents: [{
         parts: [
-          { text: role + " هل هذه الصورة أو محتواها يحتوي على تهديد رقمي؟" },
+          { text: role + " هل هذه الصورة أو محتواها يحتوي على تهديد رقمي أو تزييف؟" },
           { inline_data: { mime_type: mimeType, data: fileBase64 } }
         ]
       }]
@@ -81,20 +89,20 @@ export async function analyzeWithGemini({ apiKey, text, fileBase64, mimeType, la
 
   const aiText = await callGemini(apiKey, body);
 
-  const sourceEval = fileBase64 ? { score: 40, label: "unknown" } : evaluateSource(text);
+  const sourceEval = fileBase64 ? { score: 30, label: "unknown" } : evaluateSource(text);
   const aiEval = analyzeResponse(aiText);
 
-  // حساب النتيجة النهائية
+  // حساب النتيجة النهائية بناءً على المتوسط
   const finalScore = Math.min(100, Math.round((sourceEval.score + aiEval.score) / 2));
 
-  let status = "safe";
-  if (finalScore >= 70) status = "danger";
-  else if (finalScore >= 40) status = "warning";
+  let status = "آمن";
+  if (finalScore >= 70) status = "تحذير عالي";
+  else if (finalScore >= 35) status = "انتباه";
 
   return {
     risk_score: finalScore,
     status,
-    summary: aiText ? "اكتمل التحليل الذكي" : "لم يتم اكتشاف تهديدات واضحة",
+    summary: aiText ? "اكتمل التحليل بنجاح" : "لم يتم اكتشاف تهديدات واضحة",
     technical_details: aiText || "لا توجد تفاصيل إضافية",
     source: sourceEval.label,
     content_type: fileBase64 ? "image" : "link/text"
