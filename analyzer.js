@@ -15,76 +15,58 @@ async function callGemini(apiKey, body) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
-/* تقييم سمعة الرابط */
+/* تقييم سمعة الرابط بشكل آمن */
 function evaluateSource(text) {
   if (!text) return { score: 40, label: "unknown" };
 
-  const trusted = [
-    "wikipedia.org",
-    "gov",
-    "edu",
-    "who.int"
-  ];
+  try {
+    // التأكد من استخراج النطاق (Domain) فقط بدلاً من البحث في كامل النص
+    const urlObj = new URL(text.startsWith('http') ? text : `https://${text}`);
+    const hostname = urlObj.hostname.toLowerCase();
 
-  const suspicious = [
-    "bit.ly",
-    "tinyurl",
-    "free-download",
-    "crack",
-    "hack"
-  ];
+    const trustedEnds = [".gov", ".edu", "wikipedia.org", "who.int"];
+    const suspicious = ["bit.ly", "tinyurl", "cutt.ly", "free-download", "crack", "hack"];
 
-  if (trusted.some(d => text.includes(d)))
-    return { score: 5, label: "trusted" };
+    if (trustedEnds.some(domain => hostname.endsWith(domain)))
+      return { score: 5, label: "trusted" };
 
-  if (suspicious.some(d => text.includes(d)))
-    return { score: 85, label: "suspicious" };
+    if (suspicious.some(domain => hostname.includes(domain)))
+      return { score: 85, label: "suspicious" };
+
+  } catch (e) {
+    // إذا لم يكن الرابط صالحاً
+    return { score: 35, label: "normal" };
+  }
 
   return { score: 35, label: "normal" };
 }
 
-/* تحليل الرد */
+/* تحليل الرد - متوافق مع اللغة العربية */
 function analyzeResponse(text) {
   const dangerWords = [
-    "malware",
-    "phishing",
-    "fake",
-    "scam",
-    "virus",
-    "fraud"
+    "malware", "phishing", "fake", "scam", "virus", "fraud",
+    "ضار", "احتيال", "فيروس", "تصيد", "خبيث", "وهمي", "خطير", "اختراق", "مشبوه"
   ];
 
   const hits = dangerWords.filter(w =>
     text.toLowerCase().includes(w)
   );
 
-  if (hits.length >= 2)
-    return { score: 80, status: "danger" };
-
-  if (hits.length === 1)
-    return { score: 50, status: "warning" };
-
+  if (hits.length >= 2) return { score: 80, status: "danger" };
+  if (hits.length === 1) return { score: 50, status: "warning" };
   return { score: 10, status: "safe" };
 }
 
-/* الدالة الرئيسية */
-export async function analyzeWithGemini({
-  apiKey,
-  text,
-  fileBase64,
-  mimeType,
-  lang = "ar"
-}) {
-
-  const role = "أنت خبير أمن سيبراني. صف المخاطر إن وجدت فقط.";
-
+/* الدالة الرئيسية المصدرة للخادم */
+export async function analyzeWithGemini({ apiKey, text, fileBase64, mimeType, lang = "ar" }) {
+  const role = "أنت خبير أمن سيبراني. صف المخاطر إن وجدت فقط باختصار.";
   let body;
 
   if (fileBase64) {
     body = {
       contents: [{
         parts: [
-          { text: role + " هل هذه الوسائط ضارة رقمياً؟" },
+          { text: role + " هل هذه الصورة أو محتواها يحتوي على تهديد رقمي؟" },
           { inline_data: { mime_type: mimeType, data: fileBase64 } }
         ]
       }]
@@ -92,22 +74,18 @@ export async function analyzeWithGemini({
   } else {
     body = {
       contents: [{
-        parts: [{
-          text: role + " حلل الرابط التالي أمنياً: " + text
-        }]
+        parts: [{ text: role + " حلل الرابط أو النص التالي أمنياً: " + text }]
       }]
     };
   }
 
   const aiText = await callGemini(apiKey, body);
 
-  const sourceEval = evaluateSource(text);
+  const sourceEval = fileBase64 ? { score: 40, label: "unknown" } : evaluateSource(text);
   const aiEval = analyzeResponse(aiText);
 
-  const finalScore = Math.min(
-    100,
-    Math.round((sourceEval.score + aiEval.score) / 2)
-  );
+  // حساب النتيجة النهائية
+  const finalScore = Math.min(100, Math.round((sourceEval.score + aiEval.score) / 2));
 
   let status = "safe";
   if (finalScore >= 70) status = "danger";
@@ -116,9 +94,9 @@ export async function analyzeWithGemini({
   return {
     risk_score: finalScore,
     status,
-    summary: aiText || "لم يتم اكتشاف تهديدات واضحة",
-    technical_details: aiText,
+    summary: aiText ? "اكتمل التحليل الذكي" : "لم يتم اكتشاف تهديدات واضحة",
+    technical_details: aiText || "لا توجد تفاصيل إضافية",
     source: sourceEval.label,
-    content_type: fileBase64 ? "image" : "link"
+    content_type: fileBase64 ? "image" : "link/text"
   };
 }
