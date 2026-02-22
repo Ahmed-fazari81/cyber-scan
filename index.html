@@ -41,9 +41,10 @@ header{
   padding:20px;
 }
 
-/* أزرار المعلومات الجديدة */
+/* أزرار المعلومات */
 .info-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
   margin-bottom: 20px;
@@ -52,7 +53,7 @@ header{
   background: transparent;
   border: 1px solid var(--primary);
   color: var(--primary);
-  padding: 8px 16px;
+  padding: 8px 14px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
@@ -182,8 +183,10 @@ input[type="file"] {
   background: var(--card);
   padding: 25px;
   border-radius: 16px;
-  max-width: 500px;
-  width: 85%;
+  max-width: 550px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
   border: 1px solid var(--border);
   position: relative;
   line-height: 1.7;
@@ -204,6 +207,28 @@ input[type="file"] {
   border-bottom: 1px solid var(--border);
   padding-bottom: 10px;
 }
+
+/* تصميم الأسئلة الشائعة (Accordion) */
+details {
+  background: #0f172a;
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+summary {
+  font-weight: bold;
+  cursor: pointer;
+  color: #e2e8f0;
+  outline: none;
+}
+details p {
+  margin-top: 10px;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
 </style>
 </head>
 
@@ -217,17 +242,18 @@ input[type="file"] {
   <div class="info-buttons">
     <button class="info-btn" onclick="openModal('aboutModal')">عن التطبيق ℹ️</button>
     <button class="info-btn" onclick="openModal('guideModal')">دليل المستخدم 📖</button>
+    <button class="info-btn" style="background: var(--primary); color: white;" onclick="openModal('faqModal')">الأسئلة الشائعة ❓</button>
   </div>
 
   <div id="mainSection">
     <div class="tabs">
-      <button class="tab active" onclick="setMode('text',this)">رابط / نص</button>
-      <button class="tab" onclick="setMode('image',this)">صورة</button>
+      <button class="tab active" onclick="setMode('text',this)">رابط / إيميل</button>
+      <button class="tab" onclick="setMode('image',this)">صورة / لقطة شاشة</button>
     </div>
 
     <div class="input-area">
       <div id="text-view">
-        <textarea id="textInput" placeholder="الصق الرابط أو النص المشبوه هنا..."></textarea>
+        <textarea id="textInput" placeholder="الصق الرابط، أو نص رسالة الإيميل المشبوهة هنا..."></textarea>
       </div>
 
       <div id="image-view" style="display:none">
@@ -235,7 +261,7 @@ input[type="file"] {
         <img id="imgPreview" style="max-width:100%; display:none; margin-top:15px; border-radius:10px;">
       </div>
 
-      <button id="analyzeBtn" class="action-btn" onclick="analyze()">بدء الفحص الأمني</button>
+      <button id="analyzeBtn" class="action-btn" onclick="analyze()">بدء الفحص الجنائي الرقمي</button>
 
       <div class="progress-wrap" id="progressWrap">
         <div style="background:#020617; border-radius:10px; overflow:hidden">
@@ -255,21 +281,17 @@ input[type="file"] {
     <p id="resSummary" style="color: #cbd5e1;"></p>
 
     <div style="margin-top: 15px;">
-      <strong>التفاصيل التقنية:</strong>
-      <p id="resDetails" style="font-size: 0.95rem; color: #94a3b8;"></p>
+      <strong>تقرير المحقق الرقمي (التفاصيل التقنية):</strong>
+      <p id="resDetails" style="font-size: 0.95rem; color: #94a3b8; white-space: pre-wrap;"></p>
     </div>
 
     <div style="margin-top: 15px;">
-      <strong>التوصية الأمنية:</strong>
+      <strong>التوصية الأمنية النهائية:</strong>
       <p id="decisionReason" style="font-size: 0.95rem; color: #f87171;"></p>
     </div>
 
     <div class="note">
-      ⚠️ التقييم يعتمد على تحليل ذكاء اصطناعي احتمالي، ولا يعتبر تأكيداً قطعياً للسلامة بنسبة 100%.
-    </div>
-
-    <div style="margin-top:15px; border-top: 1px solid var(--border); padding-top: 15px;">
-      <strong>مستوى ثقة الذكاء الاصطناعي:</strong> <span id="confidence" style="color: var(--primary); font-weight: bold;"></span>
+      ⚠️ التقييم يعتمد على تحليل ذكاء اصطناعي احتمالي (Probabilistic Heuristics)، ويعمل كنظام إنذار مبكر وليس بديلاً عن برامج الحماية الأساسية.
     </div>
 
     <button class="action-btn" style="margin-top: 20px;" onclick="downloadReport()">تحميل التقرير</button>
@@ -286,9 +308,8 @@ input[type="file"] {
   <div class="modal-content">
     <button class="close-btn" onclick="closeModal('aboutModal')">×</button>
     <h2 class="modal-title">عن التطبيق ℹ️</h2>
-    <p><strong>الدرع السيبراني (CyberShield)</strong> هو منصة تحليل أمني استباقية تعتمد على تقنيات الذكاء الاصطناعي التوليدي (Gemini AI).</p>
-    <p>تم تطوير هذا التطبيق كحل تقني مبتكر للمشاركة في <strong>ملتقى الأمن السيبراني</strong>، ويهدف إلى حماية المستخدمين من هجمات التصيد الاحتيالي (Phishing)، والروابط الخبيثة، والوسائط المتعددة المزيفة.</p>
-    <p style="color: var(--primary); font-weight: bold;">رؤيتنا: تعزيز الوعي الأمني الرقمي وتوفير أداة حماية في متناول الجميع.</p>
+    <p><strong>الدرع السيبراني (CyberShield)</strong> هو منصة تحليل أمني استباقية تعتمد على تقنيات الذكاء الاصطناعي التوليدي.</p>
+    <p>تم تطوير هذا التطبيق كحل تقني مبتكر للمشاركة في <strong>ملتقى الأمن السيبراني</strong>، ويهدف إلى حماية المستخدمين من هجمات الهندسة الاجتماعية، الروابط الخبيثة، والتزييف العميق.</p>
   </div>
 </div>
 
@@ -297,41 +318,54 @@ input[type="file"] {
   <div class="modal-content">
     <button class="close-btn" onclick="closeModal('guideModal')">×</button>
     <h2 class="modal-title">دليل الاستخدام 📖</h2>
-    <p>استخدام التطبيق بسيط جداً ويتكون من خطوات معدودة:</p>
     <ol style="padding-right: 20px;">
-      <li><strong>اختر نوع الفحص:</strong> من خلال الأزرار العلوية، اختر ما إذا كنت تريد فحص (رابط/نص) أو (صورة).</li>
-      <li><strong>أدخل البيانات:</strong> قم بلصق الرابط المشبوه أو ارفع الصورة المراد تحليلها.</li>
-      <li><strong>بدء الفحص:</strong> اضغط على زر "بدء الفحص الأمني" وانتظر حتى يقوم الذكاء الاصطناعي بتحليل البيانات.</li>
-      <li><strong>النتائج:</strong> ستظهر لك نسبة الخطورة، ملخص أمني، وتوصية تقنية.</li>
-      <li><strong>التقرير:</strong> يمكنك تحميل تقرير أمني بصيغة نصية أو مشاركة النتيجة عبر الواتساب لتنبيه الآخرين.</li>
+      <li><strong>اختر نوع الفحص:</strong> اختر فحص (رابط/إيميل) أو (صورة/لقطة شاشة).</li>
+      <li><strong>أدخل البيانات:</strong> قم بلصق النص بالكامل أو ارفع الصورة.</li>
+      <li><strong>بدء الفحص:</strong> اضغط على الزر وانتظر تقرير المحقق الرقمي.</li>
+      <li><strong>النتائج:</strong> ستظهر لك مؤشرات الخطر، وطبيعة التهديد.</li>
     </ol>
   </div>
 </div>
 
-<!-- دوال التحكم في النوافذ المنبثقة وتسجيل الـ Service Worker -->
-<script>
-  // فتح النافذة المنبثقة
-  function openModal(id) {
-    document.getElementById(id).style.display = 'flex';
-  }
-  
-  // إغلاق النافذة المنبثقة
-  function closeModal(id) {
-    document.getElementById(id).style.display = 'none';
-  }
+<!-- نافذة "الأسئلة الشائعة" (الذكية جداً للمسابقة) -->
+<div id="faqModal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeModal('faqModal')">×</button>
+    <h2 class="modal-title">الأسئلة الشائعة ❓</h2>
+    
+    <details>
+      <summary>هل يكتشف التطبيق الفيديوهات المزيفة (Deepfake)؟</summary>
+      <p><strong>نعم، بأسلوب مبتكر وفعال من حيث التكلفة.</strong> رفع الفيديوهات بالكامل يستهلك النطاق الترددي (Bandwidth) وموارد الخوادم بشكل هائل. الحل المعماري في تطبيقنا هو <strong>"تحليل الإطارات (Frame Analysis)"</strong>. يقوم المستخدم بأخذ (لقطة شاشة) للمشهد المشبوه في الفيديو ويرفعها كصورة، ليقوم الذكاء الاصطناعي بفحص تشوهات البكسل (Pixels) والعيوب التشريحية فوراً.</p>
+    </details>
 
-  // إغلاق النافذة عند الضغط خارجها
+    <details>
+      <summary>لماذا لا يحدد التطبيق اسم صاحب الملف المرفوع على الروابط السحابية؟</summary>
+      <p><strong>احتراماً لقوانين الخصوصية وحماية البيانات (Data Privacy).</strong> التطبيق يقوم بتحليل "الهيكل المعماري للرابط" (URL Structure) ومطابقته مع مؤشرات التهديد (Threat Intelligence)، ولكنه لا يقوم باختراق الجلسات (Sessions) أو تخطي المصادقة لجلب بيانات المستخدمين الخاصة، لأن ذلك يعتبر انتهاكاً أمنياً بحد ذاته.</p>
+    </details>
+
+    <details>
+      <summary>هل النتائج دقيقة وآمنة بنسبة 100%؟</summary>
+      <p>في عالم الأمن السيبراني، لا يوجد نظام آمن بنسبة 100% (بسبب هجمات Zero-Day). تطبيقنا يستخدم <strong>خوارزمية هجينة (Hybrid Algorithm)</strong> تدمج بين فحص سمعة النطاقات والتحليل الاحتمالي للذكاء الاصطناعي. هو يعمل كـ <strong>"نظام إنذار مبكر"</strong> لتعزيز الوعي البشري وليس بديلاً لبرامج مكافحة الفيروسات (Endpoint Protection).</p>
+    </details>
+
+    <details>
+      <summary>هل يقوم التطبيق بفتح الروابط أو الملفات الخبيثة فعلياً؟</summary>
+      <p>في هذا الإصدار نعتمد على <strong>"التحليل الثابت" (Static Analysis)</strong> لضمان سرعة الاستجابة للمستخدم العادي. أما التشغيل الديناميكي (Dynamic Sandboxing) للملفات فهو ضمن خارطة الطريق (Roadmap) المستقبلية الموجهة للمؤسسات، حيث يتطلب بيئات افتراضية معزولة تماماً.</p>
+    </details>
+
+  </div>
+</div>
+
+<script>
+  function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
   window.onclick = function(event) {
     if (event.target.classList.contains('modal-overlay')) {
       event.target.style.display = "none";
     }
   }
-
-  // تسجيل PWA
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js');
-    });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('./service-worker.js'); });
   }
 </script>
 <script src="app.js"></script>
