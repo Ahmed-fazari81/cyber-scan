@@ -1,7 +1,7 @@
 {
   "name": "الدرع السيبراني | CyberShield",
   "short_name": "CyberShield",
-  "description": "منصة التحليل الأمني المتقدمة بالذكاء الاصطناعي",
+  "description": "منصة التحليل الأمني المتقدمة بالذكاء الاصطناعي لفحص الروابط والصور",
   "id": "/cybershield/",
   "start_url": "./index.html",
   "display": "standalone",
